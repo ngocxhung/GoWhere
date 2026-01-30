@@ -7,11 +7,16 @@ namespace GoWhere_Api.Model
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ScenicSpotId { get; set; }
+        [StringLength(100)]
         public string ScenicSpotName { get; set; }
+        [StringLength(1000)]
         public string Description { get; set; }
+
+        public double EstimatedVisitPrice { get; set; }
         public ICollection<Media> Medias { get; set; }
         [ForeignKey("ProvinceId")]
         public int ProvinceId { get; set; }
         public Province Province { get; set; }
+        public ICollection<CustomerSchedule> CustomerSchedules { get; set; }
     }
 }

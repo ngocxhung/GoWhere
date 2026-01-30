@@ -17,9 +17,11 @@ namespace GoWhere_Api.Model
         public string? FullName { get; set; }
         [Required(ErrorMessage = "Email is required.")]
         [EmailAddress(ErrorMessage = "Invalid email address.")]
+        [StringLength(100, ErrorMessage = "Email cannot be longer than 100 characters.")]
         public string Email { get; set; }
         [Required(ErrorMessage = "Phone number is required.")]
         [Phone(ErrorMessage = "Invalid phone number.")]
+        [StringLength(15, ErrorMessage = "Phone number cannot be longer than 15 characters.")]
         public string PhoneNumber { get; set; }
         [ForeignKey("RoleId")]
         [Required(ErrorMessage = "RoleId is required.")]
