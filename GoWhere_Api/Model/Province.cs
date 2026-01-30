@@ -7,6 +7,7 @@ namespace GoWhere_Api.Model
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ProvinceId { get; set; }
+        [StringLength(50)]
         public string ProvinceName { get; set; }
         public ICollection<ScenicSpot> ScenicSpots { get; set; }
 
