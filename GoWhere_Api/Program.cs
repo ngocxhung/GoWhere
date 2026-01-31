@@ -1,9 +1,10 @@
+using GoWhere_Api.Repo.IRepo;
+using GoWhere_Api.Service.IService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.OData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-// using Microsoft.OpenApi.Models; // not required when calling AddSwaggerGen with defaults
 using System.Text;
 
 namespace GoWhere_Api
@@ -18,9 +19,20 @@ namespace GoWhere_Api
 
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            builder.Services.AddOpenApi();
-            // Add Swagger (Swashbuckle)
+            // Use default Swagger generation; security UI will be provided via injected JS in Swagger UI
             builder.Services.AddSwaggerGen();
+            builder.Services.Scan(s => s
+                .FromAssemblyOf<IUserRepo>()
+                .AddClasses(classes => classes
+                    .Where(type => type.Name.EndsWith("Repo")))
+                .AsMatchingInterface()
+                .WithScopedLifetime()   );
+            builder.Services.Scan(s => s
+                .FromAssemblyOf<IAuthService>()
+                .AddClasses(classes => classes
+                    .Where(type => type.Name.EndsWith("Service")))
+                .AsMatchingInterface()
+                .WithScopedLifetime());
             builder.Services.AddDbContext<Model.ApplicationDbContext>(opt
                 => opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
             builder.Services.AddOData(option => option.Select().Filter().OrderBy().Expand().SetMaxTop(100).Count());
@@ -78,7 +90,6 @@ namespace GoWhere_Api
                 });
 
                 // Minimal API OpenAPI mapping (keeps existing behavior)
-                app.MapOpenApi();
             }
             app.UseCors("RestrictedCorsPolicy");
             app.UseHttpsRedirection();

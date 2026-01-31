@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using GoWhere_Api.Service.IService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore;
 
 namespace GoWhere_Api.Controllers
@@ -8,46 +10,32 @@ namespace GoWhere_Api.Controllers
     [ApiController]
     public class Provincecontroller : ControllerBase
     {
-        private readonly Model.ApplicationDbContext _context;
-        public Provincecontroller(Model.ApplicationDbContext context)
+        private readonly IProvinceService _provinceService;
+        public Provincecontroller(IProvinceService provinceService)
         {
-            _context = context;
+            _provinceService = provinceService;
         }
         [HttpGet("GetAllProvinces")]
-
+        [EnableQuery]
         public async Task<IActionResult> GetProvinces()
         {
-            var provinces = await _context.Provinces
-                .Select(p => new
-                {
-                    Id = p.ProvinceId,
-                    Name = p.ProvinceName,
-
-
-
-                }).ToListAsync();
-            if (provinces == null || provinces.Count == 0)
+            var provinces = await _provinceService.GetAllProvincesAsync();
+            if (provinces == null || !provinces.Any())
             {
                 return NotFound("No provinces found.");
-
-
             }
             return Ok(provinces);
         }
         [HttpGet("GetProviceById/{id}")]
         public async Task<IActionResult> GetProvinceById(int provinceId)
         {
-            var province = await _context.Provinces
-                .Select(p => new
-                {
-                    Id = p.ProvinceId,
-                    Name = p.ProvinceName
-                }).FirstOrDefaultAsync(p => p.Id == provinceId);
-            if(province == null)
+            var province = await _provinceService.GetProvinceByIdAsync(provinceId);
+            if (province == null)
             {
-                return NotFound($"Province with Id: {provinceId} not found");
+                return NotFound($"Province with ID {provinceId} not found.");
             }
             return Ok(province);
+
 
         }
     }

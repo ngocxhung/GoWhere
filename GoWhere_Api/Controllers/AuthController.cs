@@ -1,4 +1,7 @@
 ﻿using GoWhere_Api.Model;
+using GoWhere_Api.Model.DTOs.Request;
+using GoWhere_Api.Model.DTOs.Response;
+using GoWhere_Api.Service.IService;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -13,130 +16,57 @@ namespace GoWhere_Api.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _context;
-        public AuthController(IConfiguration configuration, ApplicationDbContext context)
+        private readonly IAuthService _authService;
+        public AuthController(IConfiguration configuration, ApplicationDbContext context, IAuthService authService)
         {
             _configuration = configuration;
             _context = context;
+            _authService = authService;
         }
-        [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromForm] RegisterModel register)
+        [HttpGet("Register")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+
+        public async Task<IActionResult> Register([FromForm] UserRegisterDto userRegisterDto)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest("Invalid user data.");
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+
+                }
+                await _authService.RegisterAsync(userRegisterDto);
+                return Ok(new { Message = "User registered successfully" });
             }
-            var existingUser = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == register.Username);
-            if (existingUser != null)
+            catch (Exception ex)
             {
-                return Conflict("Username already exists.");
+                return StatusCode(500, new { Message = "An error occurred during registration", Details = ex.Message });
             }
-            var user = new User
-            {
-                Username = register.Username,
-                Password = BCrypt.Net.BCrypt.HashPassword(register.Password),
-                Email = register.Email,
-                FullName = register.FullName,
-                PhoneNumber = register.PhoneNumber,
-                RoleId = 1 // Default role ID
-            };
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return Ok("User registered successfully.");
         }
         [HttpPost("Login")]
-        public async Task<IActionResult> Login([FromForm] LoginModel login)
+        public async Task<IActionResult> Login([FromForm] LoginDto loginDto)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest("Invalid login data.");
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+                var loginResponse = await _authService.LoginAsync(loginDto);
+                return Ok(new LoginResponse { Token = loginResponse.Token });
             }
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == login.Username);
-            if (user == null || !BCrypt.Net.BCrypt.Verify(login.Password, user.Password))
+            catch (UnauthorizedAccessException ex)
             {
-                return Unauthorized("Invalid username or password.");
+                return Unauthorized(new { Message = ex.Message });
             }
-            // Generate JWT token
-            var accessKey = _configuration["Jwt:Key"];
-            var claim = new[]
+            catch (Exception ex)
             {
-                new Claim(ClaimTypes.NameIdentifier, login.Username),
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.Role, user.RoleId.ToString())
-            };
-            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(accessKey));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claim,
-                expires: DateTime.Now.AddHours(2),
-                signingCredentials: creds
-            );
-            return Ok(new
-            {
-                token = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token),
-                message = "Login successfully."
-            });
+                return StatusCode(500, new { Message = "An error occurred during login", Details = ex.Message });
+            }
+
 
         }
-        [HttpPost("LoginDemo")]
-        [Obsolete("This endpoint is for demo purposes only and should not be used in production.")]
-        public async Task<IActionResult> LoginDemo()
-        {
-            var demoUser = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == "regularuser");
-            if (demoUser == null)
-            {
-                return NotFound("Demo user not found.");
-            }
-            // Generate JWT token
-            var accessKey = _configuration["Jwt:Key"];
-            var claim = new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, demoUser.Username),
-                new Claim(ClaimTypes.Name, demoUser.Username),
-                new Claim(ClaimTypes.Role, demoUser.RoleId.ToString())
-            };
-            var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(accessKey));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claim,
-                expires: DateTime.Now.AddHours(2),
-                signingCredentials: creds
-            );
-            return Ok(new
-            {
-                token = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token),
-                message = "Demo login successfully."
-            });
-        }
-
-    }
-    public class RegisterModel
-    {
-        [Required(ErrorMessage = "Username is required.")]
-        public string Username { get; set; }
-        [Required(ErrorMessage = "Password is required.")]
-        public string Password { get; set; }
-        [Required(ErrorMessage = "Email is required.")]
-        public string Email { get; set; }
-        [Required(ErrorMessage = "Full name is required.")]
-        public string FullName { get; set; }
-        [Required(ErrorMessage = "Phone number is required.")]
-        public string PhoneNumber { get; set; }
-        [Required(ErrorMessage = "Role ID is required.")]
-        public int RoleId { get; set; }
-
-    }
-    public class LoginModel
-    {
-        [Required(ErrorMessage = "Username is required.")]
-        public string Username { get; set; }
-        [Required(ErrorMessage = "Password is required.")]
-        public string Password { get; set; }
     }
 }
