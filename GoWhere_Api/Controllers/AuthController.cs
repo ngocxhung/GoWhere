@@ -68,5 +68,27 @@ namespace GoWhere_Api.Controllers
 
 
         }
+        [HttpPost("LoginDemo")]
+        [Obsolete("This endpoint is for demo purposes only and should not be used in production.")]
+        public async Task<IActionResult> LoginDemo([FromForm] LoginDto loginDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+                var loginResponse = await _authService.LoginDemoAsync(loginDto);
+                return Ok(new LoginResponse { Token = loginResponse.Token });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred during login", Details = ex.Message });
+            }
+        }
     }
 }

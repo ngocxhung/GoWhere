@@ -1,4 +1,6 @@
-﻿using GoWhere_Api.Model.DTOs.Response;
+﻿using GoWhere_Api.Model;
+using GoWhere_Api.Model.DTOs.Request;
+using GoWhere_Api.Model.DTOs.Response;
 using GoWhere_Api.Service.IService;
 
 namespace GoWhere_Api.Service.Service
@@ -10,6 +12,57 @@ namespace GoWhere_Api.Service.Service
         {
             _customerScheduleRepo = customerScheduleRepo;
         }
+
+        public async Task AddNewCustomerScheduleAsync(string customerId, CustomerScheduleRequestDto request)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+
+            if (string.IsNullOrWhiteSpace(customerId) || !int.TryParse(customerId, out var parsedUserId))
+                throw new ArgumentException("Invalid customer id.", nameof(customerId));
+
+            if (request.EndTime <= request.StartTime)
+                throw new ArgumentException("EndTime must be after StartTime.", nameof(request));
+
+            try
+            {
+                var customerSchedule = new Model.CustomerSchedule
+                {
+                    UserId = parsedUserId,
+                    StartTime = request.StartTime,
+                    EndTime = request.EndTime,
+                    Status = ScheduleStatus.Pending.ToString(),
+                    ScenicSpots = new List<ScenicSpot>()
+                };
+
+                if (request.ScenicSpots != null && request.ScenicSpots.Any())
+                {
+                    foreach (var spotId in request.ScenicSpots)
+                    {
+                        if (_customerScheduleRepo.IsScenicSpotExists(spotId))
+                        {
+                            var scenicSpot = await _customerScheduleRepo.GetScenicSpotByIdAsync(spotId);
+                            if (scenicSpot == null)
+                                throw new KeyNotFoundException($"Scenic spot with ID {spotId} does not exist.");
+
+                            customerSchedule.ScenicSpots.Add(scenicSpot);
+                        }
+                        else
+                        {
+                            throw new KeyNotFoundException($"Scenic spot with ID {spotId} does not exist.");
+                        }
+                    }
+                }
+
+                await _customerScheduleRepo.AddCustomerScheduleAsync(customerSchedule);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (logging mechanism not shown here)
+                throw new ApplicationException("An error occurred while adding a new customer schedule.", ex);
+            }
+        }
+        
 
         public async Task<IEnumerable<CustomerScheduleRespnse>> GetCustomerSchedulesAsync()
         {
@@ -74,6 +127,34 @@ namespace GoWhere_Api.Service.Service
             }
 
 
+        }
+
+        public async Task UpdateCustomerScheduleStatusAsync(int customerId, int scheduleId, string status)
+        {
+            try
+            {
+                var schedule = await _customerScheduleRepo.GetCustomerScheduleByIdAsync(scheduleId);
+                if (schedule == null)
+                {
+                    throw new KeyNotFoundException($"Schedule with ID {scheduleId} not found.");
+                }
+                if (schedule.UserId != customerId)
+                {
+                    throw new UnauthorizedAccessException("You do not have permission to update this schedule.");
+                }
+                var validStatuses = new List<string> { ScheduleStatus.Pending.ToString(), ScheduleStatus.Confirmed.ToString(), ScheduleStatus.Cancelled.ToString(), ScheduleStatus.Completed.ToString() };
+                if (!validStatuses.Contains(status))
+                {
+                    throw new ArgumentException($"Invalid status. Valid statuses are: {string.Join(", ", validStatuses)}");
+                }
+                schedule.Status = status;
+                await _customerScheduleRepo.UpdateCustomerScheduleAsync(schedule);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (logging mechanism not shown here)
+                throw new ApplicationException("An error occurred while updating customer schedule status.", ex);
+            }
         }
     }
 }

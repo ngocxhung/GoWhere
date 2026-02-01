@@ -33,6 +33,28 @@ namespace GoWhere_Api.Service.Service
                 throw new Exception($"Login failed: {ex.Message}");
             }
         }
+        [Obsolete("This method is for demo purposes only.")]
+        public async Task<LoginResponse> LoginDemoAsync(LoginDto loginDto)
+        {
+            try
+            {
+                var user = await _userRepo.GetUserByUsernameAsync(loginDto.Username);
+                if (user.Username.ToLower().Equals("regularuser"))
+                {
+                    var token = await _tokenService.GenerateTokenAsync(user.UserId, user.Username, user.RoleId.ToString());
+                    return new LoginResponse { Token = token };
+                }
+                else
+                {
+                    throw new UnauthorizedAccessException("Invalid demo user.");
+                }
+
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Login failed: {ex.Message}");
+            }
+        }
 
         public async Task RegisterAsync(UserRegisterDto userRegisterDto)
         {

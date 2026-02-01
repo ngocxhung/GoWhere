@@ -8,5 +8,6 @@ namespace GoWhere_Api.Service.IService
     {
         Task RegisterAsync(UserRegisterDto userRegisterDto);
         Task<LoginResponse> LoginAsync(Model.DTOs.Request.LoginDto loginDto);
+        Task<LoginResponse> LoginDemoAsync(LoginDto loginDto);
     }
 }

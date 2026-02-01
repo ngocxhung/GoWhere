@@ -49,7 +49,7 @@ namespace GoWhere_Api.Controllers
             return Ok(scenicSpots);
 
         }
-        [HttpPut("AddScenicSpot")]
+        [HttpPost("AddScenicSpot")]
         public async Task<IActionResult> AddScenicSpot([FromForm] ScenicSpotRequestDto scenicSpotCreateDto)
         {
             try

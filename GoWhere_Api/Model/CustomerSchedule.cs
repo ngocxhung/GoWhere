@@ -13,8 +13,8 @@ namespace GoWhere_Api.Model
         public DateTime EndTime { get; set; }
         public string Status { get; set; }
         [ForeignKey("FeedbackId")]
-        public int FeedbackId { get; set; }
-        public Feedback Feedback { get; set; }
+        public int? FeedbackId { get; set; }
+        public Feedback? Feedback { get; set; }
         public User User { get; set; }
         public ICollection<ScenicSpot> ScenicSpots { get; set; }
         

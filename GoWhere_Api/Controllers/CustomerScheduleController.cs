@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using GoWhere_Api.Model.DTOs.Request;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -47,6 +48,30 @@ namespace GoWhere_Api.Controllers
             {
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
+        }
+        [HttpPost("AddNewCustomerSchedule")]
+        [Authorize]
+        public async Task<IActionResult> AddNewCustomerSchedule([FromBody] CustomerScheduleRequestDto request)
+        {
+            var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(customerId))
+            {
+                return Unauthorized("Customer ID not found in token.");
+            }
+            await _customerScheduleService.AddNewCustomerScheduleAsync(customerId, request);
+            return CreatedAtAction(null, new { customerId }, "New customer schedule added successfully.");
+        }
+        [HttpPatch("UpdateCustomerScheduleStatus/{scheduleId}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateCustomerScheduleStatus(int scheduleId, [FromQuery] string status)
+        {
+            var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(customerId))
+            {
+                return Unauthorized("Customer ID not found in token.");
+            }
+            await _customerScheduleService.UpdateCustomerScheduleStatusAsync(int.Parse(customerId), scheduleId, status);
+            return NoContent();
         }
     }
 }

@@ -48,7 +48,7 @@ namespace GoWhere_Api.Migrations
                     b.Property<DateTime>("EndTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("FeedbackId")
+                    b.Property<int?>("FeedbackId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("StartTime")
@@ -594,9 +594,7 @@ namespace GoWhere_Api.Migrations
                 {
                     b.HasOne("GoWhere_Api.Model.Feedback", "Feedback")
                         .WithMany()
-                        .HasForeignKey("FeedbackId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("FeedbackId");
 
                     b.HasOne("GoWhere_Api.Model.User", "User")
                         .WithMany()

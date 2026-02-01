@@ -29,6 +29,7 @@ namespace GoWhere_Api.Service.Service
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
+                expires: DateTime.Now.AddHours(2),
                 signingCredentials: creds);
             return new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token); 
 
