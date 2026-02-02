@@ -601,6 +601,657 @@ fetch('/api/AIChat/CheckUsageLimit', {
 
 ---
 
+## 👑 ADMIN MANAGEMENT
+
+> **⚠️ Tất cả endpoints dưới đây yêu cầu RoleId = 2 (Admin)**
+
+---
+
+## 🏞️ Admin - Scenic Spot Management
+
+### ⚡ Thay đổi quan trọng: IsViewed Status
+
+**Giải thích:**
+- Mỗi Scenic Spot có cột `IsViewed` (Boolean)
+- `IsViewed = true`: Hiển thị cho User thông thường
+- `IsViewed = false`: Chỉ Admin thấy (chưa duyệt)
+
+**Workflow:**
+1. Admin thêm địa điểm → Mặc định `IsViewed = false`
+2. Admin duyệt → Toggle `IsViewed = true`
+3. User bắt đầu thấy địa điểm
+
+---
+
+### 1. [ADMIN] Lấy TẤT CẢ scenic spots
+
+```http
+GET /api/ScenicSpot/Admin/GetAllScenicSpots
+Authorization: Bearer {admin_token}
+```
+
+**Khác biệt với endpoint User:**
+- User endpoint: Chỉ trả về `IsViewed = true`
+- Admin endpoint: Trả về **TẤT CẢ** (bao gồm `IsViewed = false`)
+
+**Response (200):**
+```json
+[
+  {
+    "id": 1,
+    "scenicSpotName": "Hồ Hoàn Kiếm",
+    "description": "...",
+    "estimatedVisitPrice": 0,
+    "mediaUrls": ["/uploads/hanoi/hoankiem.jpg"],
+    "provinceId": 16,
+    "isViewed": true  // ← Đã duyệt, user thấy được
+  },
+  {
+    "id": 17,
+    "scenicSpotName": "Địa điểm mới chưa duyệt",
+    "description": "...",
+    "estimatedVisitPrice": 50000,
+    "mediaUrls": [],
+    "provinceId": 16,
+    "isViewed": false  // ← Chưa duyệt, chỉ admin thấy
+  }
+]
+```
+
+**Frontend UI:**
+```jsx
+<Table>
+  {scenicSpots.map(spot => (
+    <tr key={spot.id}>
+      <td>{spot.scenicSpotName}</td>
+      <td>
+        <Badge color={spot.isViewed ? 'green' : 'red'}>
+          {spot.isViewed ? 'Đã duyệt' : 'Chưa duyệt'}
+        </Badge>
+      </td>
+      <td>
+        <Button onClick={() => toggleStatus(spot.id)}>
+          {spot.isViewed ? 'Ẩn' : 'Duyệt'}
+        </Button>
+      </td>
+    </tr>
+  ))}
+</Table>
+```
+
+---
+
+### 2. [ADMIN] Thêm scenic spot mới
+
+```http
+POST /api/ScenicSpot/AddScenicSpot
+Authorization: Bearer {admin_token}
+Content-Type: multipart/form-data
+
+FormData:
+- ScenicSpotName: "Tên địa điểm"
+- Description: "Mô tả chi tiết"
+- EstimatedVisitPrice: 100000
+- ProvinceId: 16
+- Medias: [file1.jpg, file2.jpg]  // Tối đa 250MB
+```
+
+**Lưu ý:**
+- `IsViewed` tự động = `false` (chưa duyệt)
+- User thông thường KHÔNG thấy địa điểm này ngay
+- Admin cần duyệt bằng Toggle Status
+
+**Response (201):**
+```json
+{
+  "message": "Scenic spot created successfully. Status: Not viewed yet."
+}
+```
+
+---
+
+### 3. [ADMIN] Cập nhật scenic spot
+
+```http
+PUT /api/ScenicSpot/UpdateScenicSpot/{id}
+Authorization: Bearer {admin_token}
+Content-Type: multipart/form-data
+
+FormData:
+- ScenicSpotName: "Tên mới"
+- Description: "Mô tả mới"
+- EstimatedVisitPrice: 150000
+- ProvinceId: 16
+- Medias: [new_file.jpg]  // Optional
+```
+
+**Lưu ý:**
+- Không thay đổi `IsViewed` status
+- Chỉ update thông tin
+
+**Response (200):**
+```json
+{
+  "message": "Scenic spot updated successfully."
+}
+```
+
+---
+
+### 4. [ADMIN] Toggle hiển thị (Duyệt/Ẩn)
+
+```http
+PATCH /api/ScenicSpot/ToggleStatus/{id}
+Authorization: Bearer {admin_token}
+```
+
+**Chức năng:**
+- Nếu `IsViewed = false` → Chuyển thành `true` (Duyệt)
+- Nếu `IsViewed = true` → Chuyển thành `false` (Ẩn)
+
+**Use cases:**
+- **Duyệt địa điểm mới:** Admin kiểm tra và bật hiển thị
+- **Ẩn địa điểm:** Tạm thời không muốn user thấy (bảo trì, update...)
+
+**Response (200):**
+```json
+{
+  "message": "Scenic spot status toggled successfully."
+}
+```
+
+**Frontend code:**
+```javascript
+const toggleStatus = async (spotId) => {
+  const res = await fetch(`/api/ScenicSpot/ToggleStatus/${spotId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${adminToken}`
+    }
+  });
+  
+  if (res.ok) {
+    // Refresh danh sách
+    fetchScenicSpots();
+    showSuccess('Trạng thái đã được cập nhật!');
+  }
+};
+```
+
+---
+
+### 5. [ADMIN] Xóa scenic spot
+
+```http
+DELETE /api/ScenicSpot/DeleteScenicSpot/{id}
+Authorization: Bearer {admin_token}
+```
+
+**Chức năng:**
+- Xóa scenic spot khỏi database
+- Tự động xóa các file media liên quan
+
+**⚠️ Warning:** Không thể undo!
+
+**Response (200):**
+```json
+{
+  "message": "Scenic spot deleted successfully."
+}
+```
+
+---
+
+## 👥 Admin - User Management
+
+### 1. [ADMIN] Lấy tất cả users
+
+```http
+GET /api/AdminUser/GetAllUsers
+Authorization: Bearer {admin_token}
+```
+
+**Response (200):**
+```json
+[
+  {
+    "userId": 1,
+    "username": "regularuser",
+    "email": "user@example.com",
+    "fullName": "Nguyen Van A",
+    "phoneNumber": "0123456789",
+    "roleId": 1,
+    "roleName": "User"
+  },
+  {
+    "userId": 2,
+    "username": "adminuser",
+    "email": "admin@example.com",
+    "fullName": "Admin User",
+    "phoneNumber": "0987654321",
+    "roleId": 2,
+    "roleName": "Admin"
+  }
+]
+```
+
+**Frontend Table:**
+```jsx
+<UserTable>
+  {users.map(user => (
+    <tr key={user.userId}>
+      <td>{user.username}</td>
+      <td>{user.email}</td>
+      <td>{user.fullName}</td>
+      <td>
+        <Badge>{user.roleName}</Badge>
+      </td>
+      <td>
+        <ActionButtons userId={user.userId} />
+      </td>
+    </tr>
+  ))}
+</UserTable>
+```
+
+---
+
+### 2. [ADMIN] Lấy user theo ID
+
+```http
+GET /api/AdminUser/GetUserById/{id}
+Authorization: Bearer {admin_token}
+```
+
+**Response (200):**
+```json
+{
+  "userId": 1,
+  "username": "regularuser",
+  "email": "user@example.com",
+  "fullName": "Nguyen Van A",
+  "phoneNumber": "0123456789",
+  "roleId": 1,
+  "roleName": "User"
+}
+```
+
+---
+
+### 3. [ADMIN] Cập nhật user
+
+```http
+PUT /api/AdminUser/UpdateUser/{id}
+Authorization: Bearer {admin_token}
+Content-Type: application/json
+
+{
+  "email": "newemail@example.com",
+  "fullName": "New Full Name",
+  "phoneNumber": "0999999999",
+  "roleId": 1
+}
+```
+
+**Lưu ý:** Tất cả fields đều optional
+
+**Response (200):**
+```json
+{
+  "message": "User updated successfully."
+}
+```
+
+---
+
+### 4. [ADMIN] Đổi role (User ↔ Admin)
+
+```http
+PATCH /api/AdminUser/ChangeRole/{id}
+Authorization: Bearer {admin_token}
+Content-Type: application/json
+
+{
+  "roleId": 2  // 1 = User, 2 = Admin
+}
+```
+
+**Use cases:**
+- Promote user thành admin
+- Demote admin về user
+
+**Response (200):**
+```json
+{
+  "message": "User role changed successfully to RoleId: 2"
+}
+```
+
+**Frontend Toggle:**
+```jsx
+<button onClick={() => changeRole(user.userId, user.roleId === 1 ? 2 : 1)}>
+  {user.roleId === 1 ? 'Promote to Admin' : 'Demote to User'}
+</button>
+```
+
+---
+
+## 💳 Admin - Order Management
+
+### 1. [ADMIN] Lấy tất cả orders
+
+```http
+GET /api/AdminOrder/GetAllOrders
+Authorization: Bearer {admin_token}
+```
+
+**Response (200):**
+```json
+[
+  {
+    "orderId": 1,
+    "userId": 1,
+    "userName": "regularuser",
+    "userEmail": "user@example.com",
+    "totalPrice": 50000,
+    "status": "Payed",
+    "orderDate": "2026-02-02T10:00:00"
+  },
+  {
+    "orderId": 2,
+    "userId": 3,
+    "userName": "anotheruser",
+    "userEmail": "another@example.com",
+    "totalPrice": 50000,
+    "status": "Pending",
+    "orderDate": "2026-02-02T11:00:00"
+  }
+]
+```
+
+**Frontend:**
+```jsx
+<OrdersTable>
+  {orders.map(order => (
+    <tr key={order.orderId}>
+      <td>#{order.orderId}</td>
+      <td>{order.userName}</td>
+      <td>{order.totalPrice.toLocaleString()} VND</td>
+      <td>
+        <StatusBadge status={order.status} />
+      </td>
+      <td>{new Date(order.orderDate).toLocaleDateString()}</td>
+    </tr>
+  ))}
+</OrdersTable>
+```
+
+---
+
+### 2. [ADMIN] Lấy order theo ID
+
+```http
+GET /api/AdminOrder/GetOrderById/{id}
+Authorization: Bearer {admin_token}
+```
+
+**Response (200):**
+```json
+{
+  "orderId": 1,
+  "userId": 1,
+  "userName": "regularuser",
+  "userEmail": "user@example.com",
+  "userPhone": "0123456789",
+  "totalPrice": 50000,
+  "status": "Payed",
+  "orderDate": "2026-02-02T10:00:00",
+  "items": [
+    {
+      "orderItemId": 1,
+      "itemName": "AI Chat Service",
+      "price": 50000,
+      "quantity": 1
+    }
+  ]
+}
+```
+
+---
+
+### 3. [ADMIN] Lấy orders theo User ID
+
+```http
+GET /api/AdminOrder/GetOrdersByUserId/{userId}
+Authorization: Bearer {admin_token}
+```
+
+**Use case:** Xem lịch sử mua hàng của một user cụ thể
+
+---
+
+### 4. [ADMIN] Lấy orders theo trạng thái
+
+```http
+GET /api/AdminOrder/GetOrdersByStatus/{status}
+Authorization: Bearer {admin_token}
+```
+
+**Status values:**
+- `Pending` - Chờ thanh toán
+- `Payed` - Đã thanh toán
+- `Cancelled` - Đã hủy
+
+**Example:**
+```http
+GET /api/AdminOrder/GetOrdersByStatus/Pending
+```
+
+---
+
+### 5. [ADMIN] Thống kê orders
+
+```http
+GET /api/AdminOrder/GetOrderStatistics
+Authorization: Bearer {admin_token}
+```
+
+**Response (200):**
+```json
+{
+  "totalOrders": 100,
+  "pendingOrders": 15,
+  "payedOrders": 80,
+  "totalRevenue": 4000000,
+  "averageOrderValue": 50000,
+  "ordersByDate": [
+    {
+      "date": "2026-02-02",
+      "count": 10,
+      "totalAmount": 500000
+    },
+    {
+      "date": "2026-02-01",
+      "count": 8,
+      "totalAmount": 400000
+    }
+  ]
+}
+```
+
+**Frontend Dashboard:**
+```jsx
+<Statistics>
+  <Card title="Tổng đơn hàng" value={stats.totalOrders} />
+  <Card title="Chờ thanh toán" value={stats.pendingOrders} color="yellow" />
+  <Card title="Đã thanh toán" value={stats.payedOrders} color="green" />
+  <Card title="Doanh thu" value={`${stats.totalRevenue.toLocaleString()} VND`} />
+</Statistics>
+
+<Chart data={stats.ordersByDate} type="line" />
+```
+
+---
+
+### 6. [ADMIN] Hủy order
+
+```http
+PATCH /api/AdminOrder/CancelOrder/{id}
+Authorization: Bearer {admin_token}
+```
+
+**Lưu ý:** 
+- Chỉ có thể hủy order `Pending`
+- Không thể hủy order `Payed`
+
+**Response (200):**
+```json
+{
+  "message": "Order cancelled successfully."
+}
+```
+
+**Response Error (400):**
+```json
+{
+  "message": "Cannot cancel an order that has been paid."
+}
+```
+
+---
+
+### 7. [ADMIN] Xóa order
+
+```http
+DELETE /api/AdminOrder/DeleteOrder/{id}
+Authorization: Bearer {admin_token}
+```
+
+**⚠️ Warning:** Không thể undo!
+
+**Response (200):**
+```json
+{
+  "message": "Order deleted successfully."
+}
+```
+
+---
+
+## 📅 Admin - Schedule Management
+
+### 1. [ADMIN] Lấy tất cả schedules
+
+```http
+GET /api/AdminSchedule/GetAllSchedules
+Authorization: Bearer {admin_token}
+```
+
+**Response (200):**
+```json
+[
+  {
+    "scheduleId": 1,
+    "userId": 1,
+    "startTime": "2026-03-01T08:00:00",
+    "endTime": "2026-03-03T20:00:00",
+    "status": "Active",
+    "scenicSpots": [
+      {
+        "id": 1,
+        "scenicSpotName": "Hồ Hoàn Kiếm",
+        "description": "...",
+        "estimatedVisitPrice": 0,
+        "mediaUrls": [],
+        "provinceId": 16,
+        "isViewed": true
+      }
+    ],
+    "feedback": null
+  }
+]
+```
+
+---
+
+### 2. [ADMIN] Lấy schedule theo ID
+
+```http
+GET /api/AdminSchedule/GetScheduleById/{id}
+Authorization: Bearer {admin_token}
+```
+
+---
+
+### 3. [ADMIN] Lấy schedules theo User ID
+
+```http
+GET /api/AdminSchedule/GetSchedulesByUserId/{userId}
+Authorization: Bearer {admin_token}
+```
+
+**Use case:** Xem tất cả lịch trình của một user cụ thể
+
+---
+
+### 4. [ADMIN] Thống kê schedules
+
+```http
+GET /api/AdminSchedule/GetScheduleStatistics
+Authorization: Bearer {admin_token}
+```
+
+**Response (200):**
+```json
+{
+  "totalSchedules": 50,
+  "activeSchedules": 20,
+  "completedSchedules": 25,
+  "cancelledSchedules": 5,
+  "schedulesByUser": [
+    {
+      "userId": 1,
+      "scheduleCount": 10
+    },
+    {
+      "userId": 2,
+      "scheduleCount": 8
+    }
+  ],
+  "schedulesWithFeedback": 15
+}
+```
+
+**Frontend Dashboard:**
+```jsx
+<ScheduleStats>
+  <StatCard title="Tổng lịch trình" value={stats.totalSchedules} />
+  <StatCard title="Đang hoạt động" value={stats.activeSchedules} color="blue" />
+  <StatCard title="Đã hoàn thành" value={stats.completedSchedules} color="green" />
+  <StatCard title="Đã hủy" value={stats.cancelledSchedules} color="red" />
+</ScheduleStats>
+
+<TopUsers data={stats.schedulesByUser} />
+```
+
+---
+
+### 5. [ADMIN] Xóa schedule
+
+```http
+DELETE /api/AdminSchedule/DeleteSchedule/{id}
+Authorization: Bearer {admin_token}
+```
+
+**Response (200):**
+```json
+{
+  "message": "Schedule deleted successfully."
+}
+```
+
+---
+
 ## 🎯 Business Rules
 
 ### AI Chat Service
@@ -626,16 +1277,27 @@ Sử dụng AI không giới hạn ✅
 
 ## 🔒 Role-based Access
 
-| Endpoint | User | Admin |
-|----------|------|-------|
-| **Auth/** | ✅ | ✅ |
-| **AIChat/** | ✅ | ✅ |
-| **Payment/** | ✅ | ✅ |
+| Endpoint | User (RoleId=1) | Admin (RoleId=2) |
+|----------|-----------------|------------------|
+| **Auth/*** | ✅ | ✅ |
+| **AIChat/*** | ✅ | ✅ |
+| **Payment/*** | ✅ | ✅ |
 | **Province/GET** | ✅ (public) | ✅ |
-| **ScenicSpot/GET** | ✅ (public) | ✅ |
-| **ScenicSpot/POST** | ❌ | ✅ Admin only |
+| **ScenicSpot/GetAll** | ✅ (IsViewed=true only) | ✅ (IsViewed=true only) |
+| **ScenicSpot/Admin/GetAll** | ❌ | ✅ (All spots) |
+| **ScenicSpot/POST,PUT,DELETE** | ❌ | ✅ Admin only |
+| **ScenicSpot/ToggleStatus** | ❌ | ✅ Admin only |
 | **CustomerSchedule/Own** | ✅ | ✅ |
-| **CustomerSchedule/All** | ❌ | ✅ Admin only |
+| **CustomerSchedule/GetAll** | ❌ | ✅ Admin only |
+| **AdminUser/*** | ❌ | ✅ Admin only |
+| **AdminOrder/*** | ❌ | ✅ Admin only |
+| **AdminSchedule/*** | ❌ | ✅ Admin only |
+
+**Tổng Admin endpoints:** +17 endpoints mới
+
+**Lưu ý:**
+- Tất cả Admin endpoints yêu cầu: `[Authorize(Roles = "Admin")]`
+- Nếu User (RoleId=1) gọi Admin endpoint → `403 Forbidden`
 
 ---
 
@@ -810,7 +1472,7 @@ const useAIChat = () => {
 
 ## 🎯 Quick Reference
 
-### Most Used Endpoints
+### Most Used Endpoints (User)
 
 ```javascript
 // Login
@@ -828,17 +1490,41 @@ POST /api/Payment/CreateAIChatPayment
 // Get provinces (for dropdown)
 GET /api/Province
 
-// Get scenic spots by province
+// Get scenic spots by province (IsViewed=true only)
 GET /api/ScenicSpot/GetScenicSpotsByProvinceId/{provinceId}
 
 // Get user's schedules
 GET /api/CustomerSchedule/GetCustomerSchedulesByCustomerId
 ```
 
+### Most Used Endpoints (Admin)
+
+```javascript
+// Admin - Scenic Spot Management
+GET /api/ScenicSpot/Admin/GetAllScenicSpots  // All spots (bao gồm IsViewed=false)
+PATCH /api/ScenicSpot/ToggleStatus/{id}      // Duyệt/Ẩn địa điểm
+DELETE /api/ScenicSpot/DeleteScenicSpot/{id} // Xóa địa điểm
+
+// Admin - User Management
+GET /api/AdminUser/GetAllUsers               // Tất cả users
+PATCH /api/AdminUser/ChangeRole/{id}         // Đổi role
+
+// Admin - Order Management
+GET /api/AdminOrder/GetAllOrders             // Tất cả đơn hàng
+GET /api/AdminOrder/GetOrderStatistics       // Thống kê
+PATCH /api/AdminOrder/CancelOrder/{id}       // Hủy đơn
+
+// Admin - Schedule Management
+GET /api/AdminSchedule/GetAllSchedules       // Tất cả lịch trình
+GET /api/AdminSchedule/GetScheduleStatistics // Thống kê
+```
+
 ---
 
 ## 📚 Additional Resources
 
+- **Admin Management Guide:** `ADMIN_MANAGEMENT_GUIDE.md`
+- **Admin Features Summary:** `ADMIN_FEATURES_SUMMARY.md`
 - **VietQR Config:** `VIETQR_CONFIG_GUIDE.md`
 - **Payment Guide:** `PAYMENT_INTEGRATION_GUIDE.md`
 - **Test Examples:** `API_TEST_EXAMPLES.md`
@@ -846,9 +1532,12 @@ GET /api/CustomerSchedule/GetCustomerSchedulesByCustomerId
 
 ---
 
-**Version:** 2.0  
+**Version:** 3.0  
 **Last Updated:** 02/02/2026  
 **For:** Frontend Team  
 **Contact:** Backend Team
 
-**🚨 Remember:** AI Chat có thể trả về 503 nếu Gemini API lỗi!
+**🚨 Remember:** 
+- AI Chat có thể trả về 503 nếu Gemini API lỗi!
+- Admin endpoints yêu cầu RoleId = 2
+- User chỉ thấy ScenicSpots có IsViewed = true

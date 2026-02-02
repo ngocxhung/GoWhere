@@ -13,6 +13,12 @@ namespace GoWhere_Api.Model
         public string Description { get; set; }
 
         public double EstimatedVisitPrice { get; set; }
+        
+        /// <summary>
+        /// Trạng thái hiển thị: true = hiển thị cho user, false = ẩn (chỉ admin thấy)
+        /// </summary>
+        public bool IsViewed { get; set; } = false;
+        
         public ICollection<Media> Medias { get; set; }
         [ForeignKey("ProvinceId")]
         public int ProvinceId { get; set; }

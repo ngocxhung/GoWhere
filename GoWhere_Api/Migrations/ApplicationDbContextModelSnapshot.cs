@@ -221,7 +221,7 @@ namespace GoWhere_Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Order");
+                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("GoWhere_Api.Model.OrderItem", b =>
@@ -249,7 +249,7 @@ namespace GoWhere_Api.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("OrderItem");
+                    b.ToTable("OrderItems");
                 });
 
             modelBuilder.Entity("GoWhere_Api.Model.Province", b =>
@@ -633,6 +633,9 @@ namespace GoWhere_Api.Migrations
                     b.Property<double>("EstimatedVisitPrice")
                         .HasColumnType("float");
 
+                    b.Property<bool>("IsViewed")
+                        .HasColumnType("bit");
+
                     b.Property<int>("ProvinceId")
                         .HasColumnType("int");
 
@@ -653,6 +656,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 1,
                             Description = "Trái tim của thủ đô, biểu tượng văn hóa và lịch sử lâu đời của Hà Nội.",
                             EstimatedVisitPrice = 0.0,
+                            IsViewed = true,
                             ProvinceId = 16,
                             ScenicSpotName = "Hồ Hoàn Kiếm"
                         },
@@ -661,6 +665,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 2,
                             Description = "Trường đại học đầu tiên của Việt Nam, nơi lưu giữ tinh hoa đạo học.",
                             EstimatedVisitPrice = 30000.0,
+                            IsViewed = true,
                             ProvinceId = 16,
                             ScenicSpotName = "Văn Miếu - Quốc Tử Giám"
                         },
@@ -669,6 +674,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 3,
                             Description = "Quần thể di tích gắn liền với lịch sử kinh thành Thăng Long - Đông Kinh.",
                             EstimatedVisitPrice = 30000.0,
+                            IsViewed = true,
                             ProvinceId = 16,
                             ScenicSpotName = "Hoàng Thành Thăng Long"
                         },
@@ -677,6 +683,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 4,
                             Description = "Nơi an nghỉ vĩnh hằng của Bác Hồ, vị lãnh tụ kính yêu của dân tộc.",
                             EstimatedVisitPrice = 0.0,
+                            IsViewed = true,
                             ProvinceId = 16,
                             ScenicSpotName = "Lăng Chủ tịch Hồ Chí Minh"
                         },
@@ -685,6 +692,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 5,
                             Description = "Di sản thiên nhiên thế giới được UNESCO công nhận, nổi tiếng với hàng nghìn đảo đá vôi.",
                             EstimatedVisitPrice = 290000.0,
+                            IsViewed = true,
                             ProvinceId = 15,
                             ScenicSpotName = "Vịnh Hạ Long"
                         },
@@ -693,6 +701,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 6,
                             Description = "Tổ hợp vui chơi giải trí đẳng cấp quốc tế với cáp treo Nữ Hoàng và nhiều trò chơi hấp dẫn.",
                             EstimatedVisitPrice = 700000.0,
+                            IsViewed = true,
                             ProvinceId = 15,
                             ScenicSpotName = "Sun World Halong Complex"
                         },
@@ -701,6 +710,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 7,
                             Description = "Nóc nhà Đông Dương, điểm đến lý tưởng cho người yêu thích chinh phục độ cao.",
                             EstimatedVisitPrice = 800000.0,
+                            IsViewed = true,
                             ProvinceId = 1,
                             ScenicSpotName = "Đỉnh Fansipan"
                         },
@@ -709,6 +719,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 8,
                             Description = "Ngôi làng cổ đẹp như tranh của người H'Mông giữa núi rừng Tây Bắc.",
                             EstimatedVisitPrice = 70000.0,
+                            IsViewed = true,
                             ProvinceId = 1,
                             ScenicSpotName = "Bản Cát Cát"
                         },
@@ -717,6 +728,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 9,
                             Description = "Di sản văn hóa và thiên nhiên thế giới, nổi tiếng với hệ thống hang động và sông nước.",
                             EstimatedVisitPrice = 250000.0,
+                            IsViewed = true,
                             ProvinceId = 23,
                             ScenicSpotName = "Khu du lịch Tràng An"
                         },
@@ -725,6 +737,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 10,
                             Description = "Ngôi chùa lớn nhất Đông Nam Á, sở hữu nhiều kỷ lục châu Á và Việt Nam.",
                             EstimatedVisitPrice = 0.0,
+                            IsViewed = true,
                             ProvinceId = 23,
                             ScenicSpotName = "Chùa Bái Đính"
                         },
@@ -733,6 +746,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 11,
                             Description = "Đường lên tiên cảnh với Cầu Vàng nổi tiếng thế giới và làng Pháp cổ kính.",
                             EstimatedVisitPrice = 850000.0,
+                            IsViewed = true,
                             ProvinceId = 32,
                             ScenicSpotName = "Bà Nà Hills"
                         },
@@ -741,6 +755,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 12,
                             Description = "Được tạp chí Forbes bình chọn là một trong những bãi biển quyến rũ nhất hành tinh.",
                             EstimatedVisitPrice = 0.0,
+                            IsViewed = true,
                             ProvinceId = 32,
                             ScenicSpotName = "Biển Mỹ Khê"
                         },
@@ -749,6 +764,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 13,
                             Description = "Quần thể 5 ngọn núi đá vôi với nhiều hang động và chùa chiền linh thiêng.",
                             EstimatedVisitPrice = 40000.0,
+                            IsViewed = true,
                             ProvinceId = 32,
                             ScenicSpotName = "Ngũ Hành Sơn"
                         },
@@ -757,6 +773,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 14,
                             Description = "Di sản văn hóa thế giới, nơi lưu giữ vẻ đẹp cổ kính và yên bình bên dòng sông Hoài.",
                             EstimatedVisitPrice = 0.0,
+                            IsViewed = true,
                             ProvinceId = 33,
                             ScenicSpotName = "Phố cổ Hội An"
                         },
@@ -765,6 +782,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 15,
                             Description = "Di tích lịch sử quan trọng, biểu tượng của sự thống nhất đất nước.",
                             EstimatedVisitPrice = 40000.0,
+                            IsViewed = true,
                             ProvinceId = 45,
                             ScenicSpotName = "Dinh Độc Lập"
                         },
@@ -773,6 +791,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 16,
                             Description = "Biểu tượng văn hóa và thương mại lâu đời của Sài Gòn.",
                             EstimatedVisitPrice = 0.0,
+                            IsViewed = true,
                             ProvinceId = 45,
                             ScenicSpotName = "Chợ Bến Thành"
                         });

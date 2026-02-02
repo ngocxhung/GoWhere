@@ -24,6 +24,7 @@ namespace GoWhere_Api.Repo.Repo
         {
             return await _context.Orders
                 .Include(o => o.User)
+                .Include(o => o.OrderItems)
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
         }
 
@@ -46,6 +47,27 @@ namespace GoWhere_Api.Repo.Repo
                 .Where(o => o.UserId == userId)
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
+        }
+
+        public async Task<List<Order>> GetAllAsync()
+        {
+            return await _context.Orders
+                .Include(o => o.User)
+                .Include(o => o.OrderItems)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+        }
+
+        public async Task<bool> DeleteAsync(int orderId)
+        {
+            var order = await _context.Orders.FindAsync(orderId);
+            
+            if (order == null)
+                return false;
+
+            _context.Orders.Remove(order);
+            var result = await _context.SaveChangesAsync();
+            return result > 0;
         }
     }
 }

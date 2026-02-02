@@ -123,35 +123,35 @@ namespace GoWhere_Api.Model
 
             // --- SEED SCENIC SPOTS ---
             modelBuilder.Entity<ScenicSpot>().HasData(
-                // Hà Nội (16)
-                new ScenicSpot { ScenicSpotId = 1, ScenicSpotName = "Hồ Hoàn Kiếm", Description = "Trái tim của thủ đô, biểu tượng văn hóa và lịch sử lâu đời của Hà Nội.", EstimatedVisitPrice = 0, ProvinceId = 16 },
-                new ScenicSpot { ScenicSpotId = 2, ScenicSpotName = "Văn Miếu - Quốc Tử Giám", Description = "Trường đại học đầu tiên của Việt Nam, nơi lưu giữ tinh hoa đạo học.", EstimatedVisitPrice = 30000, ProvinceId = 16 },
-                new ScenicSpot { ScenicSpotId = 3, ScenicSpotName = "Hoàng Thành Thăng Long", Description = "Quần thể di tích gắn liền với lịch sử kinh thành Thăng Long - Đông Kinh.", EstimatedVisitPrice = 30000, ProvinceId = 16 },
-                new ScenicSpot { ScenicSpotId = 4, ScenicSpotName = "Lăng Chủ tịch Hồ Chí Minh", Description = "Nơi an nghỉ vĩnh hằng của Bác Hồ, vị lãnh tụ kính yêu của dân tộc.", EstimatedVisitPrice = 0, ProvinceId = 16 },
+                // Hà Nội (16) - IsViewed = true (đã duyệt)
+                new ScenicSpot { ScenicSpotId = 1, ScenicSpotName = "Hồ Hoàn Kiếm", Description = "Trái tim của thủ đô, biểu tượng văn hóa và lịch sử lâu đời của Hà Nội.", EstimatedVisitPrice = 0, ProvinceId = 16, IsViewed = true },
+                new ScenicSpot { ScenicSpotId = 2, ScenicSpotName = "Văn Miếu - Quốc Tử Giám", Description = "Trường đại học đầu tiên của Việt Nam, nơi lưu giữ tinh hoa đạo học.", EstimatedVisitPrice = 30000, ProvinceId = 16, IsViewed = true },
+                new ScenicSpot { ScenicSpotId = 3, ScenicSpotName = "Hoàng Thành Thăng Long", Description = "Quần thể di tích gắn liền với lịch sử kinh thành Thăng Long - Đông Kinh.", EstimatedVisitPrice = 30000, ProvinceId = 16, IsViewed = true },
+                new ScenicSpot { ScenicSpotId = 4, ScenicSpotName = "Lăng Chủ tịch Hồ Chí Minh", Description = "Nơi an nghỉ vĩnh hằng của Bác Hồ, vị lãnh tụ kính yêu của dân tộc.", EstimatedVisitPrice = 0, ProvinceId = 16, IsViewed = true },
                 
-                // Quảng Ninh (15)
-                new ScenicSpot { ScenicSpotId = 5, ScenicSpotName = "Vịnh Hạ Long", Description = "Di sản thiên nhiên thế giới được UNESCO công nhận, nổi tiếng với hàng nghìn đảo đá vôi.", EstimatedVisitPrice = 290000, ProvinceId = 15 },
-                new ScenicSpot { ScenicSpotId = 6, ScenicSpotName = "Sun World Halong Complex", Description = "Tổ hợp vui chơi giải trí đẳng cấp quốc tế với cáp treo Nữ Hoàng và nhiều trò chơi hấp dẫn.", EstimatedVisitPrice = 700000, ProvinceId = 15 },
+                // Quảng Ninh (15) - IsViewed = true
+                new ScenicSpot { ScenicSpotId = 5, ScenicSpotName = "Vịnh Hạ Long", Description = "Di sản thiên nhiên thế giới được UNESCO công nhận, nổi tiếng với hàng nghìn đảo đá vôi.", EstimatedVisitPrice = 290000, ProvinceId = 15, IsViewed = true },
+                new ScenicSpot { ScenicSpotId = 6, ScenicSpotName = "Sun World Halong Complex", Description = "Tổ hợp vui chơi giải trí đẳng cấp quốc tế với cáp treo Nữ Hoàng và nhiều trò chơi hấp dẫn.", EstimatedVisitPrice = 700000, ProvinceId = 15, IsViewed = true },
                 
-                // Lào Cai (1)
-                new ScenicSpot { ScenicSpotId = 7, ScenicSpotName = "Đỉnh Fansipan", Description = "Nóc nhà Đông Dương, điểm đến lý tưởng cho người yêu thích chinh phục độ cao.", EstimatedVisitPrice = 800000, ProvinceId = 1 },
-                new ScenicSpot { ScenicSpotId = 8, ScenicSpotName = "Bản Cát Cát", Description = "Ngôi làng cổ đẹp như tranh của người H'Mông giữa núi rừng Tây Bắc.", EstimatedVisitPrice = 70000, ProvinceId = 1 },
+                // Lào Cai (1) - IsViewed = true
+                new ScenicSpot { ScenicSpotId = 7, ScenicSpotName = "Đỉnh Fansipan", Description = "Nóc nhà Đông Dương, điểm đến lý tưởng cho người yêu thích chinh phục độ cao.", EstimatedVisitPrice = 800000, ProvinceId = 1, IsViewed = true },
+                new ScenicSpot { ScenicSpotId = 8, ScenicSpotName = "Bản Cát Cát", Description = "Ngôi làng cổ đẹp như tranh của người H'Mông giữa núi rừng Tây Bắc.", EstimatedVisitPrice = 70000, ProvinceId = 1, IsViewed = true },
                 
-                // Ninh Bình (23)
-                new ScenicSpot { ScenicSpotId = 9, ScenicSpotName = "Khu du lịch Tràng An", Description = "Di sản văn hóa và thiên nhiên thế giới, nổi tiếng với hệ thống hang động và sông nước.", EstimatedVisitPrice = 250000, ProvinceId = 23 },
-                new ScenicSpot { ScenicSpotId = 10, ScenicSpotName = "Chùa Bái Đính", Description = "Ngôi chùa lớn nhất Đông Nam Á, sở hữu nhiều kỷ lục châu Á và Việt Nam.", EstimatedVisitPrice = 0, ProvinceId = 23 },
+                // Ninh Bình (23) - IsViewed = true
+                new ScenicSpot { ScenicSpotId = 9, ScenicSpotName = "Khu du lịch Tràng An", Description = "Di sản văn hóa và thiên nhiên thế giới, nổi tiếng với hệ thống hang động và sông nước.", EstimatedVisitPrice = 250000, ProvinceId = 23, IsViewed = true },
+                new ScenicSpot { ScenicSpotId = 10, ScenicSpotName = "Chùa Bái Đính", Description = "Ngôi chùa lớn nhất Đông Nam Á, sở hữu nhiều kỷ lục châu Á và Việt Nam.", EstimatedVisitPrice = 0, ProvinceId = 23, IsViewed = true },
                 
-                // Đà Nẵng (32)
-                new ScenicSpot { ScenicSpotId = 11, ScenicSpotName = "Bà Nà Hills", Description = "Đường lên tiên cảnh với Cầu Vàng nổi tiếng thế giới và làng Pháp cổ kính.", EstimatedVisitPrice = 850000, ProvinceId = 32 },
-                new ScenicSpot { ScenicSpotId = 12, ScenicSpotName = "Biển Mỹ Khê", Description = "Được tạp chí Forbes bình chọn là một trong những bãi biển quyến rũ nhất hành tinh.", EstimatedVisitPrice = 0, ProvinceId = 32 },
-                new ScenicSpot { ScenicSpotId = 13, ScenicSpotName = "Ngũ Hành Sơn", Description = "Quần thể 5 ngọn núi đá vôi với nhiều hang động và chùa chiền linh thiêng.", EstimatedVisitPrice = 40000, ProvinceId = 32 },
+                // Đà Nẵng (32) - IsViewed = true
+                new ScenicSpot { ScenicSpotId = 11, ScenicSpotName = "Bà Nà Hills", Description = "Đường lên tiên cảnh với Cầu Vàng nổi tiếng thế giới và làng Pháp cổ kính.", EstimatedVisitPrice = 850000, ProvinceId = 32, IsViewed = true },
+                new ScenicSpot { ScenicSpotId = 12, ScenicSpotName = "Biển Mỹ Khê", Description = "Được tạp chí Forbes bình chọn là một trong những bãi biển quyến rũ nhất hành tinh.", EstimatedVisitPrice = 0, ProvinceId = 32, IsViewed = true },
+                new ScenicSpot { ScenicSpotId = 13, ScenicSpotName = "Ngũ Hành Sơn", Description = "Quần thể 5 ngọn núi đá vôi với nhiều hang động và chùa chiền linh thiêng.", EstimatedVisitPrice = 40000, ProvinceId = 32, IsViewed = true },
                 
-                // Quảng Nam (33)
-                new ScenicSpot { ScenicSpotId = 14, ScenicSpotName = "Phố cổ Hội An", Description = "Di sản văn hóa thế giới, nơi lưu giữ vẻ đẹp cổ kính và yên bình bên dòng sông Hoài.", EstimatedVisitPrice = 0, ProvinceId = 33 },
+                // Quảng Nam (33) - IsViewed = true
+                new ScenicSpot { ScenicSpotId = 14, ScenicSpotName = "Phố cổ Hội An", Description = "Di sản văn hóa thế giới, nơi lưu giữ vẻ đẹp cổ kính và yên bình bên dòng sông Hoài.", EstimatedVisitPrice = 0, ProvinceId = 33, IsViewed = true },
                 
-                // TP. Hồ Chí Minh (45)
-                new ScenicSpot { ScenicSpotId = 15, ScenicSpotName = "Dinh Độc Lập", Description = "Di tích lịch sử quan trọng, biểu tượng của sự thống nhất đất nước.", EstimatedVisitPrice = 40000, ProvinceId = 45 },
-                new ScenicSpot { ScenicSpotId = 16, ScenicSpotName = "Chợ Bến Thành", Description = "Biểu tượng văn hóa và thương mại lâu đời của Sài Gòn.", EstimatedVisitPrice = 0, ProvinceId = 45 }
+                // TP. Hồ Chí Minh (45) - IsViewed = true
+                new ScenicSpot { ScenicSpotId = 15, ScenicSpotName = "Dinh Độc Lập", Description = "Di tích lịch sử quan trọng, biểu tượng của sự thống nhất đất nước.", EstimatedVisitPrice = 40000, ProvinceId = 45, IsViewed = true },
+                new ScenicSpot { ScenicSpotId = 16, ScenicSpotName = "Chợ Bến Thành", Description = "Biểu tượng văn hóa và thương mại lâu đời của Sài Gòn.", EstimatedVisitPrice = 0, ProvinceId = 45, IsViewed = true }
             );
 
             // --- SEED MEDIA ---

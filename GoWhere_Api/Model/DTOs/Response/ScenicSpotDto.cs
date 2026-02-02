@@ -8,5 +8,6 @@
         public double EstimatedVisitPrice { get; set; }
         public List<string> MediaUrls { get; set; }
         public int ProvinceId { get; set; }
+        public bool IsViewed { get; set; }
     }
 }

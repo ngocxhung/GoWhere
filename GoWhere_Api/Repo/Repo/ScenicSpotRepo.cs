@@ -7,6 +7,7 @@ namespace GoWhere_Api.Repo.Repo
     public class ScenicSpotRepo : IScenicSpotRepo
     {
         private readonly ApplicationDbContext _context;
+        
         public ScenicSpotRepo(ApplicationDbContext context)
         {
             _context = context;
@@ -37,16 +38,22 @@ namespace GoWhere_Api.Repo.Repo
 
         public async Task<IEnumerable<ScenicSpot>> GetAllScenicSpotsAsync()
         {
-            return await _context.ScenicSpots.ToListAsync();
+            return await _context.ScenicSpots
+                .Include(s => s.Medias)
+                .ToListAsync();
         }
+        
         public Task<ScenicSpot> GetScenicSpotByIdAsync(int id)
         {
-            return _context.ScenicSpots.FindAsync(id).AsTask();
+            return _context.ScenicSpots
+                .Include(s => s.Medias)
+                .FirstOrDefaultAsync(s => s.ScenicSpotId == id);
         }
 
         public async Task<IEnumerable<ScenicSpot>> GetScenicSpotsByProvinceIdAsync(int provinceId)
         {
             return await _context.ScenicSpots
+                .Include(s => s.Medias)
                 .Where(spot => spot.ProvinceId == provinceId)
                 .ToListAsync();
         }
@@ -55,6 +62,25 @@ namespace GoWhere_Api.Repo.Repo
         {
             _context.ScenicSpots.Update(scenicSpot);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteScenicSpotAsync(int id)
+        {
+            var scenicSpot = await _context.ScenicSpots
+                .Include(s => s.Medias)
+                .FirstOrDefaultAsync(s => s.ScenicSpotId == id);
+            
+            if (scenicSpot != null)
+            {
+                // Delete related medias first
+                if (scenicSpot.Medias != null && scenicSpot.Medias.Any())
+                {
+                    _context.Medias.RemoveRange(scenicSpot.Medias);
+                }
+                
+                _context.ScenicSpots.Remove(scenicSpot);
+                await _context.SaveChangesAsync();
+            }
         }
     }
 }

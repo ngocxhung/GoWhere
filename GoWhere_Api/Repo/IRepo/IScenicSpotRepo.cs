@@ -1,4 +1,5 @@
 ﻿
+
 using GoWhere_Api.Model;
 
 namespace GoWhere_Api.Repo.IRepo
@@ -10,5 +11,6 @@ namespace GoWhere_Api.Repo.IRepo
         Task AddScenicSpotAsync(ScenicSpot scenicSpot);
         Task<IEnumerable<ScenicSpot>> GetScenicSpotsByProvinceIdAsync(int provinceId);
         Task UpdateSceneicSpotAsync(ScenicSpot scenicSpot);
+        Task DeleteScenicSpotAsync(int id);
     }
 }
