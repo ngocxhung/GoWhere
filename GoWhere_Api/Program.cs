@@ -21,6 +21,10 @@ namespace GoWhere_Api
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             // Use default Swagger generation; security UI will be provided via injected JS in Swagger UI
             builder.Services.AddSwaggerGen();
+            
+            // Add HttpClient for AI service
+            builder.Services.AddHttpClient();
+            
             builder.Services.Scan(s => s
                 .FromAssemblyOf<IUserRepo>()
                 .AddClasses(classes => classes

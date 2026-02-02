@@ -37,6 +37,35 @@ namespace GoWhere_Api.Migrations
                     b.ToTable("CustomerScheduleScenicSpot");
                 });
 
+            modelBuilder.Entity("GoWhere_Api.Model.AISuggestionRequest", b =>
+                {
+                    b.Property<int>("RequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RequestId"));
+
+                    b.Property<int>("Count")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<double>("Price")
+                        .HasColumnType("float");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RequestId");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AISuggestionRequests");
+                });
+
             modelBuilder.Entity("GoWhere_Api.Model.CustomerSchedule", b =>
                 {
                     b.Property<int>("ScheduleId")
@@ -63,7 +92,9 @@ namespace GoWhere_Api.Migrations
 
                     b.HasKey("ScheduleId");
 
-                    b.HasIndex("FeedbackId");
+                    b.HasIndex("FeedbackId")
+                        .IsUnique()
+                        .HasFilter("[FeedbackId] IS NOT NULL");
 
                     b.HasIndex("UserId");
 
@@ -79,15 +110,14 @@ namespace GoWhere_Api.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FeedbackId"));
 
                     b.Property<string>("Comments")
-                        .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<int>("CustomerScheduleId")
-                        .HasColumnType("int");
-
                     b.Property<double>("Rating")
                         .HasColumnType("float");
+
+                    b.Property<int?>("ScheduleId")
+                        .HasColumnType("int");
 
                     b.HasKey("FeedbackId");
 
@@ -114,6 +144,112 @@ namespace GoWhere_Api.Migrations
                     b.HasIndex("ScenicSpotId");
 
                     b.ToTable("Medias");
+
+                    b.HasData(
+                        new
+                        {
+                            MediaId = 1,
+                            MediaUrl = "/uploads/hanoi/hoankiem.jpg",
+                            ScenicSpotId = 1
+                        },
+                        new
+                        {
+                            MediaId = 2,
+                            MediaUrl = "/uploads/hanoi/vanmieu.jpg",
+                            ScenicSpotId = 2
+                        },
+                        new
+                        {
+                            MediaId = 3,
+                            MediaUrl = "/uploads/quangninh/halong.jpg",
+                            ScenicSpotId = 5
+                        },
+                        new
+                        {
+                            MediaId = 4,
+                            MediaUrl = "/uploads/laocai/fansipan.jpg",
+                            ScenicSpotId = 7
+                        },
+                        new
+                        {
+                            MediaId = 5,
+                            MediaUrl = "/uploads/ninhbinh/trangan.jpg",
+                            ScenicSpotId = 9
+                        },
+                        new
+                        {
+                            MediaId = 6,
+                            MediaUrl = "/uploads/danang/banahills.jpg",
+                            ScenicSpotId = 11
+                        },
+                        new
+                        {
+                            MediaId = 7,
+                            MediaUrl = "/uploads/quangnam/hoian.jpg",
+                            ScenicSpotId = 14
+                        },
+                        new
+                        {
+                            MediaId = 8,
+                            MediaUrl = "/uploads/hcm/dinhdoclap.jpg",
+                            ScenicSpotId = 15
+                        });
+                });
+
+            modelBuilder.Entity("GoWhere_Api.Model.Order", b =>
+                {
+                    b.Property<int>("OrderId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderId"));
+
+                    b.Property<DateTime>("OrderDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double>("TotalPrice")
+                        .HasColumnType("float");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("OrderId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Order");
+                });
+
+            modelBuilder.Entity("GoWhere_Api.Model.OrderItem", b =>
+                {
+                    b.Property<int>("OrderItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderItemId"));
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<double>("Price")
+                        .HasColumnType("float");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.HasKey("OrderItemId");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("OrderItem");
                 });
 
             modelBuilder.Entity("GoWhere_Api.Model.Province", b =>
@@ -510,6 +646,136 @@ namespace GoWhere_Api.Migrations
                     b.HasIndex("ProvinceId");
 
                     b.ToTable("ScenicSpots");
+
+                    b.HasData(
+                        new
+                        {
+                            ScenicSpotId = 1,
+                            Description = "Trái tim của thủ đô, biểu tượng văn hóa và lịch sử lâu đời của Hà Nội.",
+                            EstimatedVisitPrice = 0.0,
+                            ProvinceId = 16,
+                            ScenicSpotName = "Hồ Hoàn Kiếm"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 2,
+                            Description = "Trường đại học đầu tiên của Việt Nam, nơi lưu giữ tinh hoa đạo học.",
+                            EstimatedVisitPrice = 30000.0,
+                            ProvinceId = 16,
+                            ScenicSpotName = "Văn Miếu - Quốc Tử Giám"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 3,
+                            Description = "Quần thể di tích gắn liền với lịch sử kinh thành Thăng Long - Đông Kinh.",
+                            EstimatedVisitPrice = 30000.0,
+                            ProvinceId = 16,
+                            ScenicSpotName = "Hoàng Thành Thăng Long"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 4,
+                            Description = "Nơi an nghỉ vĩnh hằng của Bác Hồ, vị lãnh tụ kính yêu của dân tộc.",
+                            EstimatedVisitPrice = 0.0,
+                            ProvinceId = 16,
+                            ScenicSpotName = "Lăng Chủ tịch Hồ Chí Minh"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 5,
+                            Description = "Di sản thiên nhiên thế giới được UNESCO công nhận, nổi tiếng với hàng nghìn đảo đá vôi.",
+                            EstimatedVisitPrice = 290000.0,
+                            ProvinceId = 15,
+                            ScenicSpotName = "Vịnh Hạ Long"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 6,
+                            Description = "Tổ hợp vui chơi giải trí đẳng cấp quốc tế với cáp treo Nữ Hoàng và nhiều trò chơi hấp dẫn.",
+                            EstimatedVisitPrice = 700000.0,
+                            ProvinceId = 15,
+                            ScenicSpotName = "Sun World Halong Complex"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 7,
+                            Description = "Nóc nhà Đông Dương, điểm đến lý tưởng cho người yêu thích chinh phục độ cao.",
+                            EstimatedVisitPrice = 800000.0,
+                            ProvinceId = 1,
+                            ScenicSpotName = "Đỉnh Fansipan"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 8,
+                            Description = "Ngôi làng cổ đẹp như tranh của người H'Mông giữa núi rừng Tây Bắc.",
+                            EstimatedVisitPrice = 70000.0,
+                            ProvinceId = 1,
+                            ScenicSpotName = "Bản Cát Cát"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 9,
+                            Description = "Di sản văn hóa và thiên nhiên thế giới, nổi tiếng với hệ thống hang động và sông nước.",
+                            EstimatedVisitPrice = 250000.0,
+                            ProvinceId = 23,
+                            ScenicSpotName = "Khu du lịch Tràng An"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 10,
+                            Description = "Ngôi chùa lớn nhất Đông Nam Á, sở hữu nhiều kỷ lục châu Á và Việt Nam.",
+                            EstimatedVisitPrice = 0.0,
+                            ProvinceId = 23,
+                            ScenicSpotName = "Chùa Bái Đính"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 11,
+                            Description = "Đường lên tiên cảnh với Cầu Vàng nổi tiếng thế giới và làng Pháp cổ kính.",
+                            EstimatedVisitPrice = 850000.0,
+                            ProvinceId = 32,
+                            ScenicSpotName = "Bà Nà Hills"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 12,
+                            Description = "Được tạp chí Forbes bình chọn là một trong những bãi biển quyến rũ nhất hành tinh.",
+                            EstimatedVisitPrice = 0.0,
+                            ProvinceId = 32,
+                            ScenicSpotName = "Biển Mỹ Khê"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 13,
+                            Description = "Quần thể 5 ngọn núi đá vôi với nhiều hang động và chùa chiền linh thiêng.",
+                            EstimatedVisitPrice = 40000.0,
+                            ProvinceId = 32,
+                            ScenicSpotName = "Ngũ Hành Sơn"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 14,
+                            Description = "Di sản văn hóa thế giới, nơi lưu giữ vẻ đẹp cổ kính và yên bình bên dòng sông Hoài.",
+                            EstimatedVisitPrice = 0.0,
+                            ProvinceId = 33,
+                            ScenicSpotName = "Phố cổ Hội An"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 15,
+                            Description = "Di tích lịch sử quan trọng, biểu tượng của sự thống nhất đất nước.",
+                            EstimatedVisitPrice = 40000.0,
+                            ProvinceId = 45,
+                            ScenicSpotName = "Dinh Độc Lập"
+                        },
+                        new
+                        {
+                            ScenicSpotId = 16,
+                            Description = "Biểu tượng văn hóa và thương mại lâu đời của Sài Gòn.",
+                            EstimatedVisitPrice = 0.0,
+                            ProvinceId = 45,
+                            ScenicSpotName = "Chợ Bến Thành"
+                        });
                 });
 
             modelBuilder.Entity("GoWhere_Api.Model.User", b =>
@@ -590,11 +856,28 @@ namespace GoWhere_Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("GoWhere_Api.Model.AISuggestionRequest", b =>
+                {
+                    b.HasOne("GoWhere_Api.Model.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId");
+
+                    b.HasOne("GoWhere_Api.Model.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("GoWhere_Api.Model.CustomerSchedule", b =>
                 {
                     b.HasOne("GoWhere_Api.Model.Feedback", "Feedback")
-                        .WithMany()
-                        .HasForeignKey("FeedbackId");
+                        .WithOne("CustomerSchedule")
+                        .HasForeignKey("GoWhere_Api.Model.CustomerSchedule", "FeedbackId");
 
                     b.HasOne("GoWhere_Api.Model.User", "User")
                         .WithMany()
@@ -618,6 +901,28 @@ namespace GoWhere_Api.Migrations
                     b.Navigation("ScenicSpot");
                 });
 
+            modelBuilder.Entity("GoWhere_Api.Model.Order", b =>
+                {
+                    b.HasOne("GoWhere_Api.Model.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GoWhere_Api.Model.OrderItem", b =>
+                {
+                    b.HasOne("GoWhere_Api.Model.Order", "Order")
+                        .WithMany("OrderItems")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("GoWhere_Api.Model.ScenicSpot", b =>
                 {
                     b.HasOne("GoWhere_Api.Model.Province", "Province")
@@ -638,6 +943,16 @@ namespace GoWhere_Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("GoWhere_Api.Model.Feedback", b =>
+                {
+                    b.Navigation("CustomerSchedule");
+                });
+
+            modelBuilder.Entity("GoWhere_Api.Model.Order", b =>
+                {
+                    b.Navigation("OrderItems");
                 });
 
             modelBuilder.Entity("GoWhere_Api.Model.Province", b =>

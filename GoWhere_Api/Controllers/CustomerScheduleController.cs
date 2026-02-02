@@ -1,6 +1,7 @@
 ﻿using GoWhere_Api.Model.DTOs.Request;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using System.Security.Claims;
 
 namespace GoWhere_Api.Controllers
@@ -20,15 +21,20 @@ namespace GoWhere_Api.Controllers
         [Authorize]
         public async Task<IActionResult> GetCustomerSchedulesByCustomerId()
         {
-            var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(customerId))
+            try
             {
-                return Unauthorized("Customer ID not found in token.");
+                var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    return Unauthorized("Customer ID not found in token.");
+                }
+                var schedules = await _customerScheduleService.GetCustomerSchedulesByCustomerIdAsync(int.Parse(customerId));
+                return Ok(schedules);
             }
-            var schedules = await _customerScheduleService.GetCustomerSchedulesByCustomerIdAsync(int.Parse(customerId));
-            return Ok(schedules);
-
-
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
         [HttpGet("GetAllCustomerSchedules")]
         [Authorize(Roles = "Admin")]
@@ -53,25 +59,67 @@ namespace GoWhere_Api.Controllers
         [Authorize]
         public async Task<IActionResult> AddNewCustomerSchedule([FromBody] CustomerScheduleRequestDto request)
         {
-            var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(customerId))
-            {
-                return Unauthorized("Customer ID not found in token.");
+           try {
+                var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    return Unauthorized("Customer ID not found in token.");
+                }
+                if(!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+                await _customerScheduleService.AddNewCustomerScheduleAsync(int.Parse(customerId), request);
+                return CreatedAtAction(null, new { customerId }, "Customer schedule created successfully.");
             }
-            await _customerScheduleService.AddNewCustomerScheduleAsync(customerId, request);
-            return CreatedAtAction(null, new { customerId }, "New customer schedule added successfully.");
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
         [HttpPatch("UpdateCustomerScheduleStatus/{scheduleId}")]
         [Authorize]
-        public async Task<IActionResult> UpdateCustomerScheduleStatus(int scheduleId, [FromQuery] string status)
+        public async Task<IActionResult> UpdateCustomerScheduleStatus(int scheduleId, [FromBody] string status)
         {
-            var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(customerId))
+            try
             {
-                return Unauthorized("Customer ID not found in token.");
+                var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    return Unauthorized("Customer ID not found in token.");
+                }
+                await _customerScheduleService.UpdateCustomerScheduleStatusAsync(int.Parse(customerId), scheduleId, status);
+                return NoContent();
             }
-            await _customerScheduleService.UpdateCustomerScheduleStatusAsync(int.Parse(customerId), scheduleId, status);
-            return NoContent();
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+
+        }
+        [HttpPost("AddFeedback")]
+        [Authorize]
+        public async Task<IActionResult> AddFeedback([FromBody] FeedbackRequestDto request)
+        {
+            try
+            {
+                var customerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(customerId))
+                {
+                    return Unauthorized("Customer ID not found in token.");
+                }
+                if(!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+                await _customerScheduleService.AddFeedbackAsync(int.Parse(customerId), request);
+                return CreatedAtAction(null, new { customerId }, "Feedback added successfully.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+
         }
     }
 }

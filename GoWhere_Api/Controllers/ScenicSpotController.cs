@@ -50,6 +50,7 @@ namespace GoWhere_Api.Controllers
 
         }
         [HttpPost("AddScenicSpot")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AddScenicSpot([FromForm] ScenicSpotRequestDto scenicSpotCreateDto)
         {
             try

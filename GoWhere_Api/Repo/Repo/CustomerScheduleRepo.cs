@@ -19,6 +19,12 @@ namespace GoWhere_Api.Repo.Repo
             await _context.SaveChangesAsync();
         }
 
+        public async Task AddFeedbackAsync(Feedback feedback)
+        {
+            await _context.Feedbacks.AddAsync(feedback);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<CustomerSchedule> GetCustomerScheduleByIdAsync(int scheduleId)
         {
             return await _context.CustomerSchedules.FindAsync(scheduleId);
@@ -36,9 +42,21 @@ namespace GoWhere_Api.Repo.Repo
                 .ToListAsync(); 
         }
 
+        public async Task<Feedback> GetFeedBackByScheduleIdAsync(int scheduleId)
+        {
+            return await _context.Feedbacks
+                .FirstOrDefaultAsync(fb => fb.ScheduleId == scheduleId);
+        }
+
         public async Task<ScenicSpot> GetScenicSpotByIdAsync(int spotId)
         {
             return await _context.ScenicSpots.FindAsync(spotId);
+        }
+
+        public async Task<bool> IsCustomerOwnsScheduleAsync(int customerId, int scheduleId)
+        {
+            return await _context.CustomerSchedules
+                .AnyAsync(cs => cs.UserId == customerId && cs.ScheduleId == scheduleId);
         }
 
         public bool IsScenicSpotExists(int spotId)

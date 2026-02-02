@@ -8,5 +8,6 @@
         public DateTime EndTime { get; set; }
         public string Status { get; set; }
         public List<ScenicSpotDto> ScenicSpots { get; set; }
+        public FeedbackDto? Feedback { get; set; }
     }
 }
