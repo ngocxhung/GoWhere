@@ -251,8 +251,9 @@ namespace GoWhere_Api.Service.Service
             var prompt = BuildPrompt(request, scenicSpots, cars, hotels);
 
             // Call Gemini API
-            var apiUrl = $"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={apiKey}";
-            // ... rest of logic remains same ...
+            var modelName = "gemini-flash-latest";
+
+            var apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/{modelName}:generateContent?key={apiKey}";            // ... rest of logic remains same ...
             var requestBody = new
             {
                 contents = new[]
