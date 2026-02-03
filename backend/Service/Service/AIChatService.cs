@@ -15,8 +15,7 @@ namespace GoWhere_Api.Service.Service
         private readonly IProvinceRepo _provinceRepo;
         private readonly IConfiguration _configuration;
         private readonly HttpClient _httpClient;
-        private readonly ApplicationDbContext _context;
-        private const int FREE_REQUEST_LIMIT = 5; // Increased for better testing
+        private const int FREE_REQUEST_LIMIT = 2;
         private const decimal PAYMENT_PRICE = 50000; // 50,000 VND
 
         public AIChatService(
@@ -24,15 +23,13 @@ namespace GoWhere_Api.Service.Service
             IScenicSpotRepo scenicSpotRepo,
             IProvinceRepo provinceRepo,
             IConfiguration configuration,
-            IHttpClientFactory httpClientFactory,
-            ApplicationDbContext context)
+            IHttpClientFactory httpClientFactory)
         {
             _aiSuggestionRepo = aiSuggestionRepo;
             _scenicSpotRepo = scenicSpotRepo;
             _provinceRepo = provinceRepo;
             _configuration = configuration;
             _httpClient = httpClientFactory.CreateClient();
-            _context = context;
         }
 
         public async Task<AIUsageLimitResponseDto> CheckUsageLimitAsync(int userId)
@@ -49,7 +46,7 @@ namespace GoWhere_Api.Service.Service
                 RemainingFreeRequests = remainingRequests,
                 RequiresPayment = requiresPayment,
                 PaymentAmount = requiresPayment ? PAYMENT_PRICE : 0,
-                Message = requiresPayment 
+                Message = requiresPayment
                     ? $"Bạn đã hết lượt tạo lịch trình miễn phí. Vui lòng thanh toán {PAYMENT_PRICE:N0} VND để tiếp tục."
                     : $"Bạn còn {remainingRequests} lượt miễn phí."
             };
@@ -57,162 +54,39 @@ namespace GoWhere_Api.Service.Service
 
         public async Task<AIScheduleResponseDto> GenerateScheduleAsync(int userId, AIScheduleRequestDto request)
         {
-            try {
-                // 1. Check usage limit
-                var usageLimit = await CheckUsageLimitAsync(userId);
-                if (usageLimit.RequiresPayment)
-                {
-                    throw new InvalidOperationException($"Bạn đã hết lượt miễn phí. Vui lòng thanh toán {PAYMENT_PRICE:N0} VND để tiếp tục.");
-                }
-
-                // 2. Try to find the province based on destination
-                var provinces = await _context.Provinces.ToListAsync();
-                var targetProvince = provinces.FirstOrDefault(p => !string.IsNullOrEmpty(p.ProvinceName) && !string.IsNullOrEmpty(request.Destination) && 
-                    (request.Destination.Contains(p.ProvinceName, StringComparison.OrdinalIgnoreCase) || p.ProvinceName.Contains(request.Destination, StringComparison.OrdinalIgnoreCase)));
-
-                if (targetProvince == null)
-                {
-                    // Try finding via ScenicSpot name
-                    var spotFound = await _context.ScenicSpots.Include(s => s.Province)
-                        .FirstOrDefaultAsync(s => s.ScenicSpotName.Contains(request.Destination));
-                    targetProvince = spotFound?.Province;
-                }
-
-                // Fallback to first province if nothing found
-                targetProvince ??= provinces.FirstOrDefault() ?? new Province { ProvinceId = 1, ProvinceName = "Việt Nam" };
-
-                // 3. Get database data
-                var scenicSpots = await _context.ScenicSpots
-                    .Where(s => s.ProvinceId == targetProvince.ProvinceId)
-                    .Include(s => s.Medias)
-                    .ToListAsync();
-
-                var suitableCar = await _context.CarRentals
-                    .Where(c => c.Seats >= request.Pax)
-                    .OrderBy(c => c.PricePerDay)
-                    .FirstOrDefaultAsync();
-
-                var suitableHotel = await _context.Hotels
-                    .Where(h => h.ProvinceId == targetProvince.ProvinceId)
-                    .OrderByDescending(h => h.Rating)
-                    .FirstOrDefaultAsync();
-
-                // 4. Manual Logic to Generate Schedule (Replacing Gemini call for "trial")
-                var scheduleResponse = GenerateManualSchedule(request, targetProvince, scenicSpots, suitableCar, suitableHotel);
-
-                // 5. Increment request count
-                await IncrementRequestCountAsync(userId);
-
-                // 6. Finalize response
-                scheduleResponse.RemainingFreeRequests = FREE_REQUEST_LIMIT - (await _aiSuggestionRepo.GetRequestCountAsync(userId));
-                scheduleResponse.RequiresPayment = scheduleResponse.RemainingFreeRequests <= 0;
-
-                return scheduleResponse;
-            } catch (Exception ex) {
-                Console.WriteLine("ERROR IN GenerateScheduleAsync: " + ex.ToString());
-                throw;
-            }
-        }
-
-        private AIScheduleResponseDto GenerateManualSchedule(AIScheduleRequestDto request, Province province, List<ScenicSpot> spots, CarRental? car, Hotel? hotel)
-        {
-            var result = new AIScheduleResponseDto
+            // 1. Check usage limit
+            var usageLimit = await CheckUsageLimitAsync(userId);
+            if (usageLimit.RequiresPayment)
             {
-                Summary = $"Dựa trên yêu cầu của bạn, GoWhere đã tối ưu lịch trình {request.NumberOfDays} ngày tại {province.ProvinceName}. " +
-                          (car != null ? $"Hệ thống đã chọn xe {car.Model} phù hợp cho {request.Pax} người. " : "Không tìm thấy xe phù hợp trong DB. ") +
-                          (hotel != null ? $"Khách sạn được chọn: {hotel.Name}." : "Vui lòng tự chọn khách sạn."),
-                EstimatedTotalCost = 0,
-                DailyItinerary = new List<DayItineraryDto>()
-            };
-
-            decimal totalCost = 0;
-            // Add Car cost
-            if (car != null) totalCost += (decimal)(car.PricePerDay * request.NumberOfDays);
-            // Add Hotel cost
-            if (hotel != null) totalCost += (decimal)(hotel.PricePerNight * (request.NumberOfDays - 1));
-
-            int spotIndex = 0;
-            for (int i = 1; i <= request.NumberOfDays; i++)
-            {
-                var day = new DayItineraryDto
-                {
-                    Day = i,
-                    Date = $"Ngày {i}",
-                    Activities = new List<ScheduleItemDto>(),
-                    DayBudget = 0
-                };
-
-                // Activity 1: Morning
-                if (i == 1)
-                {
-                    day.Activities.Add(new ScheduleItemDto { 
-                        Time = "08:00", 
-                        Activity = "Di chuyển", 
-                        Description = $"Bắt đầu hành trình từ {request.UserLocation} tới {province.ProvinceName} bằng {car?.Model ?? "phương tiện tự chọn"}.", 
-                        EstimatedCost = 0 
-                    });
-                }
-                else
-                {
-                    day.Activities.Add(new ScheduleItemDto { 
-                        Time = "08:00", 
-                        Activity = "Ăn sáng", 
-                        Description = $"Dùng bữa sáng tại {hotel?.Name ?? "khách sạn"}.", 
-                        EstimatedCost = 50000 
-                    });
-                    day.DayBudget += 50000;
-                }
-
-                // Activity 2: Scenic Spot
-                if (spotIndex < spots.Count)
-                {
-                    var spot = spots[spotIndex++];
-                    day.Activities.Add(new ScheduleItemDto
-                    {
-                        Time = "10:00",
-                        Activity = "Tham quan",
-                        Description = $"Khám phá {spot.ScenicSpotName}. {spot.Description}",
-                        EstimatedCost = (decimal)spot.EstimatedVisitPrice,
-                        ScenicSpot = new ScenicSpotDetailDto
-                        {
-                            ScenicSpotId = spot.ScenicSpotId,
-                            Name = spot.ScenicSpotName,
-                            Description = spot.Description,
-                            EstimatedVisitPrice = spot.EstimatedVisitPrice,
-                            MediaUrls = spot.Medias?.Select(m => m.MediaUrl).ToList() ?? new List<string>()
-                        }
-                    });
-                    day.DayBudget += (decimal)spot.EstimatedVisitPrice;
-                }
-
-                // Activity 3: Afternoon
-                if (spotIndex < spots.Count)
-                {
-                    var spot = spots[spotIndex++];
-                    day.Activities.Add(new ScheduleItemDto
-                    {
-                        Time = "14:00",
-                        Activity = "Tham quan",
-                        Description = $"Ghé thăm {spot.ScenicSpotName}.",
-                        EstimatedCost = (decimal)spot.EstimatedVisitPrice,
-                        ScenicSpot = new ScenicSpotDetailDto
-                        {
-                            ScenicSpotId = spot.ScenicSpotId,
-                            Name = spot.ScenicSpotName,
-                            Description = spot.Description,
-                            EstimatedVisitPrice = spot.EstimatedVisitPrice,
-                            MediaUrls = spot.Medias?.Select(m => m.MediaUrl).ToList() ?? new List<string>()
-                        }
-                    });
-                    day.DayBudget += (decimal)spot.EstimatedVisitPrice;
-                }
-
-                totalCost += day.DayBudget;
-                result.DailyItinerary.Add(day);
+                throw new InvalidOperationException($"Bạn đã hết lượt miễn phí. Vui lòng thanh toán {PAYMENT_PRICE:N0} VND để tiếp tục.");
             }
 
-            result.EstimatedTotalCost = totalCost;
-            return result;
+            // 2. Get scenic spots data
+            var scenicSpots = await _scenicSpotRepo.GetScenicSpotsByProvinceIdAsync(request.ProvinceId);
+            var province = await _provinceRepo.GetProvinceByIdAsync(request.ProvinceId);
+
+            if (province == null)
+            {
+                throw new KeyNotFoundException($"Tỉnh với ID {request.ProvinceId} không tồn tại.");
+            }
+
+            // 3. Filter by budget
+            var filteredSpots = scenicSpots
+                .Where(s => s.EstimatedVisitPrice <= (double)(request.Budget / request.NumberOfDays))
+                .ToList();
+
+            // 4. Generate schedule using Gemini AI
+            var aiResponse = await CallGeminiAPIAsync(request, filteredSpots, province);
+
+            // 5. Only increment request count after successful AI response
+            await IncrementRequestCountAsync(userId);
+
+            // 6. Parse and return response
+            var scheduleResponse = ParseAIResponse(aiResponse, filteredSpots, request);
+            scheduleResponse.RemainingFreeRequests = FREE_REQUEST_LIMIT - (await _aiSuggestionRepo.GetRequestCountAsync(userId));
+            scheduleResponse.RequiresPayment = scheduleResponse.RemainingFreeRequests <= 0;
+
+            return scheduleResponse;
         }
 
         private async Task IncrementRequestCountAsync(int userId)
@@ -239,7 +113,7 @@ namespace GoWhere_Api.Service.Service
             }
         }
 
-        private async Task<string> CallGeminiAPIAsync(AIScheduleRequestDto request, List<ScenicSpot> scenicSpots, List<CarRental> cars, List<Hotel> hotels)
+        private async Task<string> CallGeminiAPIAsync(AIScheduleRequestDto request, List<ScenicSpot> scenicSpots, Province province)
         {
             var apiKey = _configuration["GeminiAPI:ApiKey"];
             if (string.IsNullOrEmpty(apiKey))
@@ -247,26 +121,29 @@ namespace GoWhere_Api.Service.Service
                 throw new InvalidOperationException("Gemini API Key not configured. Add 'GeminiAPI:ApiKey' to appsettings.json");
             }
 
-            // Build prompt
-            var prompt = BuildPrompt(request, scenicSpots, cars, hotels);
+            // Build prompt with scenic spots data
+            var prompt = BuildPrompt(request, scenicSpots, province);
 
-            // Call Gemini API
             var modelName = "gemini-flash-latest";
 
-            var apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/{modelName}:generateContent?key={apiKey}";            // ... rest of logic remains same ...
+            var apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/{modelName}:generateContent?key={apiKey}";
             var requestBody = new
             {
                 contents = new[]
                 {
                     new
                     {
-                        parts = new[] { new { text = prompt } }
+                        parts = new[]
+                        {
+                            new { text = prompt }
+                        }
                     }
                 }
             };
 
             var jsonContent = JsonSerializer.Serialize(requestBody);
             var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
             var response = await _httpClient.PostAsync(apiUrl, content);
 
             if (!response.IsSuccessStatusCode)
@@ -281,75 +158,63 @@ namespace GoWhere_Api.Service.Service
             return geminiResponse?.candidates?[0]?.content?.parts?[0]?.text ?? "Không thể tạo lịch trình. Vui lòng thử lại.";
         }
 
-        private string BuildPrompt(AIScheduleRequestDto request, List<ScenicSpot> scenicSpots, List<CarRental> cars, List<Hotel> hotels)
+        private string BuildPrompt(AIScheduleRequestDto request, List<ScenicSpot> scenicSpots, Province province)
         {
             var spotsInfo = new StringBuilder();
-            foreach (var spot in scenicSpots.Take(20))
+            foreach (var spot in scenicSpots.Take(10))  // Limit to 10 spots to avoid token limit
             {
-                spotsInfo.AppendLine($"- [ID:{spot.ScenicSpotId}] {spot.ScenicSpotName} ({spot.Province?.ProvinceName}): {spot.Description}, Giá: {spot.EstimatedVisitPrice:N0} VND");
-            }
-
-            var carsInfo = new StringBuilder();
-            if (!cars.Any()) carsInfo.AppendLine("KHÔNG CÓ XE PHÙ HỢP");
-            else {
-                foreach (var car in cars) {
-                    carsInfo.AppendLine($"- [ID:{car.CarRentalId}] {car.Model} ({car.Seats} chỗ), Giá: {car.PricePerDay:N0} VND/ngày");
-                }
-            }
-
-            var hotelsInfo = new StringBuilder();
-            if (!hotels.Any()) hotelsInfo.AppendLine("KHÔNG CÓ KHÁCH SẠN PHÙ HỢP");
-            else {
-                foreach (var hotel in hotels.Take(10)) {
-                    hotelsInfo.AppendLine($"- [ID:{hotel.HotelId}] {hotel.Name} ({hotel.Location}), Giá: {hotel.PricePerNight:N0} VND/đêm");
-                }
+                spotsInfo.AppendLine($"- {spot.ScenicSpotName}: {spot.Description}, Giá: {spot.EstimatedVisitPrice:N0} VND");
             }
 
             var prompt = $@"
 Bạn là chuyên gia tư vấn du lịch Việt Nam. Hãy tạo một lịch trình du lịch chi tiết cho khách hàng với thông tin sau:
 
 **Thông tin chuyến đi:**
-- Xuất phát từ: {request.UserLocation}
-- Điểm tới (Destination): {request.Destination} 
-- Số người tham gia: {request.Pax} ({request.CompanionType})
+- Điểm đến: {province.ProvinceName}
 - Ngân sách: {request.Budget:N0} VND
 - Số ngày: {request.NumberOfDays} ngày
 - Phong cách: {request.TravelStyle}
+- Đi cùng: {request.CompanionType}
+{(string.IsNullOrEmpty(request.AdditionalRequirements) ? "" : $"- Yêu cầu thêm: {request.AdditionalRequirements}")}
 
-**Dữ liệu hệ thống hỗ trợ (Dựa vào đây để chọn):**
-1. DANH SÁCH ĐỊA ĐIỂM (SCENIC SPOTS):
+**Các địa điểm du lịch có sẵn trong hệ thống:**
 {spotsInfo}
 
-2. DANH SÁCH XE (CARS):
-{carsInfo}
+**YÊU CẦU:**
+1. Tạo lịch trình {request.NumberOfDays} ngày, mỗi ngày có 3-5 hoạt động
+2. Ưu tiên sử dụng các địa điểm trong danh sách trên
+3. Thêm thông tin về ẩm thực, di chuyển, nghỉ ngơi
+4. Tổng chi phí phải trong ngân sách {request.Budget:N0} VND
+5. Phù hợp với phong cách {request.TravelStyle} và nhóm {request.CompanionType}
+6. Trả về JSON format như sau:
 
-3. DANH SÁCH KHÁCH SẠN (HOTELS):
-{hotelsInfo}
-
-**YÊU CẦU QUAN TRỌNG:**
-1. Tìm trong DANH SÁCH ĐỊA ĐIỂM trên một địa điểm GẦN NHẤT với '{request.Destination}' thông qua kiến thức về bản đồ.
-2. Tạo lịch trình di chuyển từ '{request.UserLocation}' tới địa điểm đó.
-3. PHẢI chọn 1 xe từ danh sách 'DANH SÁCH XE' phù hợp với {request.Pax} người. Nếu danh sách báo 'KHÔNG CÓ XE PHÙ HỢP', hãy ghi chú trong phần summary.
-4. PHẢI chọn 1 khách sạn từ 'DANH SÁCH KHÁCH SẠN' gần khu vực điểm đến. Nếu không có khách sạn nào phù hợp, hãy ghi chú trong summary.
-5. Thiết kế lịch trình {request.NumberOfDays} ngày.
-6. Trả về JSON format:
 {{
-  ""summary"": ""Tóm tắt lịch trình, bao gồm việc chọn xe và khách sạn nào, hoặc báo lỗi nếu không tìm thấy cái phù hợp."",
+  ""summary"": ""Tóm tắt lịch trình"",
   ""estimatedTotalCost"": 0,
   ""dailyItinerary"": [
     {{
-      ""day"": 1, ""date"": ""Ngày 1"", ""dayBudget"": 0,
+      ""day"": 1,
+      ""date"": ""Ngày 1"",
+      ""dayBudget"": 0,
       ""activities"": [
         {{
           ""time"": ""08:00"",
-          ""scenicSpot"": {{ ""name"": ""Tên địa điểm từ danh sách"", ""description"": """", ""estimatedVisitPrice"": 0 }},
-          ""activity"": ""Di chuyển/Tham quan"", ""description"": """", ""estimatedCost"": 0
+          ""scenicSpot"": {{
+            ""name"": ""Tên địa điểm"",
+            ""description"": ""Mô tả"",
+            ""estimatedVisitPrice"": 0,
+            ""tips"": ""Lưu ý khi tham quan""
+          }},
+          ""activity"": ""Hoạt động"",
+          ""description"": ""Mô tả chi tiết"",
+          ""estimatedCost"": 0
         }}
       ]
     }}
   ]
 }}
-CHỈ TRẢ VỀ JSON.
+
+CHỈ TRẢ VỀ JSON, KHÔNG THÊM TEXT NÀO KHÁC.
 ";
             return prompt;
         }
@@ -414,7 +279,7 @@ CHỈ TRẢ VỀ JSON.
                 // Fallback: Return a simple response
                 return new AIScheduleResponseDto
                 {
-                    Summary = $"Lịch trình {request.NumberOfDays} ngày đi {request.Destination}",
+                    Summary = $"Lịch trình {request.NumberOfDays} ngày tại tỉnh {request.ProvinceId}",
                     EstimatedTotalCost = request.Budget,
                     DailyItinerary = new List<DayItineraryDto>(),
                     RemainingFreeRequests = 0,

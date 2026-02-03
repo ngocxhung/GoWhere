@@ -4,7 +4,7 @@ namespace GoWhere_Api.Model.DTOs.Request
 {
     public class AIScheduleRequestDto
     {
-        public int? ProvinceId { get; set; }
+        public int ProvinceId { get; set; }
 
         [Required(ErrorMessage = "Location is required.")]
         public string UserLocation { get; set; }
