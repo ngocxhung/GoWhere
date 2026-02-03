@@ -1,0 +1,135 @@
+:root {
+  --bg: #f5faff;
+  --surface: #ffffff;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --brand: #1ea1f2;
+  --brand-dark: #1787cc;
+  --line: #e3eef7;
+  --radius: 18px;
+  --shadow: 0 10px 28px rgba(2, 132, 199, .08);
+  --success: #10b981;
+  --warning: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Be Vietnam Pro', 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  padding: 0 24px;
+}
+
+.section-block {
+  margin-top: 72px;
+  margin-bottom: 72px;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Common UI Elements */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 20px;
+  border-radius: 999px;
+  font-size: 15px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+  transition: .2s;
+  font-weight: 500;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .1);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--brand), #0ea5e9);
+  color: white;
+  border: none;
+  box-shadow: 0 8px 24px rgba(30, 161, 242, .4);
+  font-weight: 600;
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, var(--brand-dark), #0284c7);
+  box-shadow: 0 12px 28px rgba(30, 161, 242, .5);
+}
+
+.btn.ghost {
+  background: transparent;
+  border: none;
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.btn.ghost:hover {
+  background: rgba(30, 161, 242, .08);
+}
+
+/* Include other styles from index.html CSS block */
+/* ... I will add them incrementally or as needed ... */
