@@ -59,6 +59,7 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('username', formData.username);
                     localStorage.setItem('fullname', data.fullName);
+                    localStorage.setItem('role', data.role);
                     window.location.reload();
                 } else {
                     setError(data.message || 'Đăng nhập không thành công');

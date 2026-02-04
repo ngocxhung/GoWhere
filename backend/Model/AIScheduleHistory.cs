@@ -23,6 +23,7 @@ namespace GoWhere_Api.Model
         public Province? Province { get; set; }
 
         [Required]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Budget { get; set; }
 
         [Required]
@@ -42,6 +43,7 @@ namespace GoWhere_Api.Model
 
         public string? Summary { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
         public decimal EstimatedTotalCost { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

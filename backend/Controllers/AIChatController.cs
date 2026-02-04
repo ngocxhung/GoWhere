@@ -217,5 +217,98 @@ namespace GoWhere_Api.Controllers
                 return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Tạo order thanh toán cho AI unlimited
+        /// </summary>
+        [HttpPost("CreateAIPaymentOrder")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> CreateAIPaymentOrder()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized("User ID not found in token.");
+                }
+
+                var aiSuggestionRepo = HttpContext.RequestServices.GetRequiredService<Repo.IRepo.IAISuggestionRequestRepo>();
+                var orderRepo = HttpContext.RequestServices.GetRequiredService<Repo.IRepo.IOrderRepo>();
+
+                var userIdInt = int.Parse(userId);
+                var aiRequest = await aiSuggestionRepo.GetByUserIdAsync(userIdInt);
+
+                // Check if already paid
+                if (aiRequest?.Order != null && aiRequest.Order.Status == "Payed")
+                {
+                    return BadRequest(new { Message = "Bạn đã thanh toán rồi!" });
+                }
+
+                // Check if already has pending payment order
+                if (aiRequest?.Order != null && aiRequest.Order.Status == "WaitPayment")
+                {
+                    return Ok(new 
+                    { 
+                        Message = "Đơn hàng đã tồn tại", 
+                        OrderId = aiRequest.Order.OrderId,
+                        Amount = 50000
+                    });
+                }
+
+                // Create new order for AI payment
+                var order = new Model.Order
+                {
+                    UserId = userIdInt,
+                    OrderDate = DateTime.Now,
+                    Status = "WaitPayment",
+                    TotalPrice = 50000,
+                    OrderItems = new List<Model.OrderItem>
+                    {
+                        new Model.OrderItem
+                        {
+                            ItemName = "AI Unlimited - Tạo lịch trình không giới hạn",
+                            Price = 50000,
+                            Quantity = 1,
+                            ServiceType = "AI"
+                        }
+                    }
+                };
+
+                await orderRepo.CreateAsync(order);
+
+                // Link order to AI request
+                if (aiRequest == null)
+                {
+                    aiRequest = new Model.AISuggestionRequest
+                    {
+                        UserId = userIdInt,
+                        Count = 0,
+                        Price = 50000,
+                        OrderId = order.OrderId
+                    };
+                    await aiSuggestionRepo.CreateAsync(aiRequest);
+                }
+                else
+                {
+                    aiRequest.OrderId = order.OrderId;
+                    aiRequest.Price = 50000;
+                    await aiSuggestionRepo.UpdateAsync(aiRequest);
+                }
+
+                return Ok(new 
+                { 
+                    Message = "Tạo đơn hàng thành công", 
+                    OrderId = order.OrderId,
+                    Amount = 50000
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
+            }
+        }
     }
 }

@@ -114,6 +114,7 @@ namespace GoWhere_Api.Service.Service
             var scheduleResponse = ParseAIResponse(aiResponse, filteredSpots, request);
             scheduleResponse.RemainingFreeRequests = FREE_REQUEST_LIMIT - (await _aiSuggestionRepo.GetRequestCountAsync(userId));
             scheduleResponse.RequiresPayment = scheduleResponse.RemainingFreeRequests <= 0;
+            scheduleResponse.ProvinceId = province.ProvinceId;
 
             // 8. Save to history
             await SaveScheduleHistoryAsync(userId, request, province, scheduleResponse);
@@ -135,7 +136,10 @@ namespace GoWhere_Api.Service.Service
                     TravelStyle = request.TravelStyle,
                     CompanionType = request.CompanionType,
                     Pax = request.Pax,
-                    ScheduleJson = JsonSerializer.Serialize(response),
+                    ScheduleJson = JsonSerializer.Serialize(response, new JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+                    }),
                     Summary = response.Summary,
                     EstimatedTotalCost = response.EstimatedTotalCost,
                     CreatedAt = DateTime.UtcNow

@@ -85,6 +85,47 @@ namespace GoWhere_Api
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<Model.ApplicationDbContext>();
                 dbContext.Database.Migrate();
+                
+                // Auto-create AIScheduleHistories table if not exists
+                try
+                {
+                    var tableExists = dbContext.Database.ExecuteSqlRaw(@"
+                        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AIScheduleHistories')
+                        BEGIN
+                            CREATE TABLE [dbo].[AIScheduleHistories] (
+                                [Id] INT IDENTITY(1,1) NOT NULL,
+                                [UserId] INT NOT NULL,
+                                [Destination] NVARCHAR(MAX) NOT NULL,
+                                [ProvinceId] INT NULL,
+                                [Budget] DECIMAL(18, 2) NOT NULL,
+                                [NumberOfDays] INT NOT NULL,
+                                [TravelStyle] NVARCHAR(MAX) NOT NULL,
+                                [CompanionType] NVARCHAR(MAX) NOT NULL,
+                                [Pax] INT NOT NULL,
+                                [ScheduleJson] NVARCHAR(MAX) NOT NULL,
+                                [Summary] NVARCHAR(MAX) NULL,
+                                [EstimatedTotalCost] DECIMAL(18, 2) NOT NULL,
+                                [CreatedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                                CONSTRAINT [PK_AIScheduleHistories] PRIMARY KEY CLUSTERED ([Id] ASC),
+                                CONSTRAINT [FK_AIScheduleHistories_Users_UserId] FOREIGN KEY ([UserId]) 
+                                    REFERENCES [dbo].[Users] ([UserId]) ON DELETE CASCADE,
+                                CONSTRAINT [FK_AIScheduleHistories_Provinces_ProvinceId] FOREIGN KEY ([ProvinceId]) 
+                                    REFERENCES [dbo].[Provinces] ([ProvinceId]) ON DELETE NO ACTION
+                            );
+                            
+                            CREATE NONCLUSTERED INDEX [IX_AIScheduleHistories_UserId] 
+                                ON [dbo].[AIScheduleHistories] ([UserId] ASC);
+                            
+                            CREATE NONCLUSTERED INDEX [IX_AIScheduleHistories_ProvinceId] 
+                                ON [dbo].[AIScheduleHistories] ([ProvinceId] ASC);
+                        END
+                    ");
+                    Console.WriteLine("✅ AIScheduleHistories table checked/created successfully");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Warning: Could not create AIScheduleHistories table: {ex.Message}");
+                }
             }
 
             // Configure the HTTP request pipeline.
@@ -107,7 +148,6 @@ namespace GoWhere_Api
             }
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 

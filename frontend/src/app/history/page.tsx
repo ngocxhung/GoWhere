@@ -64,7 +64,14 @@ export default function HistoryPage() {
     const viewSchedule = (item: any) => {
         try {
             const schedule = JSON.parse(item.scheduleJson);
-            setSelectedSchedule({ ...item, parsedSchedule: schedule });
+            // Support both PascalCase (old data) and camelCase (new data)
+            const normalizedSchedule = {
+                ...schedule,
+                dailyItinerary: schedule.dailyItinerary || schedule.DailyItinerary || [],
+                summary: schedule.summary || schedule.Summary || item.summary,
+                estimatedTotalCost: schedule.estimatedTotalCost || schedule.EstimatedTotalCost || item.estimatedTotalCost
+            };
+            setSelectedSchedule({ ...item, parsedSchedule: normalizedSchedule });
         } catch (error) {
             console.error('Failed to parse schedule:', error);
         }
@@ -160,37 +167,47 @@ export default function HistoryPage() {
                         </div>
 
                         <div className="modal-body">
-                            <div className="result-summary">{selectedSchedule.parsedSchedule.summary}</div>
+                            <div className="result-summary">
+                                {selectedSchedule.parsedSchedule?.summary || selectedSchedule.summary || 'Không có mô tả'}
+                            </div>
 
                             <div className="result-cost">
-                                <DollarOutlined /> Tổng chi phí: <strong>{money(selectedSchedule.parsedSchedule.estimatedTotalCost)} VND</strong>
+                                <DollarOutlined /> Tổng chi phí: <strong>
+                                    {money(selectedSchedule.parsedSchedule?.estimatedTotalCost || selectedSchedule.estimatedTotalCost || 0)} VND
+                                </strong>
                             </div>
 
-                            <div className="days-list">
-                                {selectedSchedule.parsedSchedule.dailyItinerary?.map((day: any, idx: number) => (
-                                    <div key={idx} className="day-item">
-                                        <div className="day-header">
-                                            <strong>Ngày {day.day}</strong>
-                                            <span>{money(day.dayBudget)} VND</span>
-                                        </div>
-                                        <div className="activities">
-                                            {day.activities?.map((act: any, actIdx: number) => (
-                                                <div key={actIdx} className="activity">
-                                                    <div className="act-time">{act.time}</div>
-                                                    <div className="act-details">
-                                                        <strong>{act.scenicSpot?.name || act.activity}</strong>
-                                                        <p>{act.description}</p>
-                                                        {act.scenicSpot?.tips && (
-                                                            <div className="act-tips">💡 {act.scenicSpot.tips}</div>
-                                                        )}
+                            {selectedSchedule.parsedSchedule?.dailyItinerary && selectedSchedule.parsedSchedule.dailyItinerary.length > 0 ? (
+                                <div className="days-list">
+                                    {selectedSchedule.parsedSchedule.dailyItinerary.map((day: any, idx: number) => (
+                                        <div key={idx} className="day-item">
+                                            <div className="day-header">
+                                                <strong>Ngày {day.day}</strong>
+                                                <span>{money(day.dayBudget || 0)} VND</span>
+                                            </div>
+                                            <div className="activities">
+                                                {day.activities?.map((act: any, actIdx: number) => (
+                                                    <div key={actIdx} className="activity">
+                                                        <div className="act-time">{act.time || 'N/A'}</div>
+                                                        <div className="act-details">
+                                                            <strong>{act.scenicSpot?.name || act.activity || 'Hoạt động'}</strong>
+                                                            <p>{act.description || ''}</p>
+                                                            {act.scenicSpot?.tips && (
+                                                                <div className="act-tips">💡 {act.scenicSpot.tips}</div>
+                                                            )}
+                                                        </div>
+                                                        <div className="act-cost">{money(act.estimatedCost || 0)} VND</div>
                                                     </div>
-                                                    <div className="act-cost">{money(act.estimatedCost)} VND</div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="empty-schedule">
+                                    <p>Không có chi tiết lịch trình</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -264,6 +281,8 @@ export default function HistoryPage() {
         .act-details p { color: #64748b; font-size: 13px; line-height: 1.5; margin: 0; }
         .act-tips { background: #fef3c7; color: #92400e; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-top: 8px; border: 1px dashed #fbbf24; }
         .act-cost { color: #10b981; font-weight: 700; text-align: right; font-size: 14px; }
+
+        .empty-schedule { text-align: center; padding: 40px 20px; color: #94a3b8; font-style: italic; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }

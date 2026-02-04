@@ -7,6 +7,7 @@ namespace GoWhere_Api.Model.DTOs.Response
         public List<DayItineraryDto> DailyItinerary { get; set; }
         public int RemainingFreeRequests { get; set; }  // Số lần free còn lại
         public bool RequiresPayment { get; set; }  // Có cần thanh toán không
+        public int? ProvinceId { get; set; }  // ID của tỉnh/thành phố
     }
 
     public class DayItineraryDto

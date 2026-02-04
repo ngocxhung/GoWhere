@@ -35,6 +35,20 @@ namespace GoWhere_Api.Model
                 .WithMany(r => r.Users)
                 .HasForeignKey(u => u.RoleId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure AIScheduleHistory relationships
+            modelBuilder.Entity<AIScheduleHistory>()
+                .HasOne(a => a.User)
+                .WithMany()
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<AIScheduleHistory>()
+                .HasOne(a => a.Province)
+                .WithMany()
+                .HasForeignKey(a => a.ProvinceId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             modelBuilder.Entity<Role>()
                 .HasData(
                     new Role { RoleId = 1, RoleName = "User" },

@@ -807,6 +807,8 @@ export default function Home() {
   const [selectedTour, setSelectedTour] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
   const [aiResult, setAiResult] = useState<any>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleProvinceId, setScheduleProvinceId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchTours = async () => {
@@ -866,6 +868,7 @@ export default function Home() {
       if (res.ok) {
         const result = await res.json();
         setAiResult(result);
+        setScheduleProvinceId(result.provinceId || null);
 
         // Transform AI result to UI format
         const newItinerary: Record<number, Activity[]> = {};
@@ -882,7 +885,7 @@ export default function Home() {
         setItinerary(newItinerary);
         setTotalCost(result.estimatedTotalCost);
         setCurrentDay(1);
-        setTimeout(() => document.getElementById('itinerary')?.scrollIntoView({ behavior: 'smooth' }), 100);
+        setShowScheduleModal(true); // Open modal instead of scrolling
       } else {
         const err = await res.json();
         alert(err.message || "Lỗi khi tạo lịch trình AI");
@@ -913,10 +916,82 @@ export default function Home() {
 
       <ToursSection tours={tours} onSelect={(tour) => setSelectedTour(tour)} />
 
-      {itinerary && <Itinerary acts={itinerary} currentDay={currentDay} onDaySelect={setCurrentDay} totalCost={totalCost} aiResult={aiResult} />}
-
       <ReelsWidget />
       <ChatWidget />
+
+      {/* Schedule Result Modal */}
+      {showScheduleModal && aiResult && (
+        <div className="schedule-modal modal-overlay" onClick={() => setShowScheduleModal(false)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowScheduleModal(false)}>
+              ✕
+            </button>
+
+            <div className="modal-header">
+              <CalendarOutlined style={{ fontSize: '28px' }} />
+              <h2>Lịch trình của bạn</h2>
+            </div>
+
+            <div className="modal-body">
+              {/* Video Section */}
+              {scheduleProvinceId && (
+                <div className="modal-video-section">
+                  <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="modal-video-item"
+                  >
+                    <source src={`/media/short/${scheduleProvinceId}.mp4`} type="video/mp4" />
+                  </video>
+                </div>
+              )}
+
+              <div className="result-summary">{aiResult.summary}</div>
+
+              <div className="result-cost">
+                <DollarOutlined /> Tổng chi phí dự kiến: <strong>{money(aiResult.estimatedTotalCost)} VND</strong>
+              </div>
+
+              <div className="days-list">
+                {aiResult.dailyItinerary?.map((day: any, idx: number) => (
+                  <div key={idx} className="day-item">
+                    <div className="day-header">
+                      <strong>Ngày {day.day}</strong>
+                      <span>{money(day.dayBudget)} VND</span>
+                    </div>
+                    <div className="activities">
+                      {day.activities?.map((act: any, actIdx: number) => (
+                        <div key={actIdx} className="activity">
+                          <div className="act-time">{act.time}</div>
+                          <div className="act-details">
+                            <strong>{act.scenicSpot?.name || act.activity}</strong>
+                            <p>{act.description}</p>
+                            {act.scenicSpot?.tips && (
+                              <div className="act-tips">💡 {act.scenicSpot.tips}</div>
+                            )}
+                          </div>
+                          <div className="act-cost">{money(act.estimatedCost)} VND</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="modal-footer">
+                <button className="btn-secondary" onClick={() => setShowScheduleModal(false)}>
+                  Đóng
+                </button>
+                <button className="btn-primary">
+                  <CalendarOutlined /> Lưu lịch trình
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <TourDetailModal
         tour={selectedTour}
@@ -961,6 +1036,41 @@ export default function Home() {
         .footer-links a { color: rgba(255,255,255,0.7); font-size: 14px; }
         .footer-links a:hover { color: white; }
         .footer-v2 p { font-size: 14px; opacity: 0.5; }
+
+        /* Schedule Result Modal Styles */
+        .schedule-modal.modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.2s; }
+        .schedule-modal .modal-container { background: white; border-radius: 24px; max-width: 900px; width: 100%; max-height: 90vh; overflow: hidden; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3); position: relative; display: flex; flex-direction: column; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .schedule-modal .modal-close { position: absolute; top: 20px; right: 20px; z-index: 10; background: rgba(0, 0, 0, 0.1); border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; font-weight: 700; color: #64748b; transition: 0.2s; display: grid; place-items: center; }
+        .schedule-modal .modal-close:hover { background: rgba(0, 0, 0, 0.2); transform: rotate(90deg); color: #0f172a; }
+        .schedule-modal .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 32px; display: flex; align-items: center; gap: 16px; }
+        .schedule-modal .modal-header h2 { font-size: 28px; font-weight: 800; margin: 0; }
+        .schedule-modal .modal-body { flex: 1; overflow-y: auto; padding: 32px; }
+        
+        .schedule-modal .modal-video-section { margin-bottom: 24px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; }
+        .schedule-modal .modal-video-item { width: 100%; height: auto; display: block; max-height: 400px; object-fit: cover; }
+        
+        .schedule-modal .result-summary { background: #f0f9ff; border: 1px dashed #667eea; border-radius: 12px; padding: 16px; margin-bottom: 24px; color: #0369a1; font-style: italic; line-height: 1.6; }
+        .schedule-modal .result-cost { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px 20px; border-radius: 12px; margin-bottom: 24px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .schedule-modal .result-cost strong { font-size: 20px; }
+        .schedule-modal .days-list { display: flex; flex-direction: column; gap: 20px; }
+        .schedule-modal .day-item { background: #f8fafc; border-radius: 16px; padding: 20px; border: 1px solid #e5e7eb; }
+        .schedule-modal .day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e5e7eb; }
+        .schedule-modal .day-header strong { font-size: 18px; color: #667eea; }
+        .schedule-modal .day-header span { color: #10b981; font-weight: 700; }
+        .schedule-modal .activities { display: flex; flex-direction: column; gap: 12px; }
+        .schedule-modal .activity { display: grid; grid-template-columns: 80px 1fr 120px; gap: 16px; align-items: start; background: white; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; }
+        .schedule-modal .act-time { background: #f0f9ff; color: #667eea; font-weight: 800; padding: 8px; border-radius: 8px; text-align: center; font-size: 13px; }
+        .schedule-modal .act-details strong { display: block; color: #0f172a; margin-bottom: 6px; font-size: 15px; }
+        .schedule-modal .act-details p { color: #64748b; font-size: 13px; line-height: 1.5; margin: 0; }
+        .schedule-modal .act-tips { background: #fef3c7; color: #92400e; padding: 8px 12px; border-radius: 8px; font-size: 12px; margin-top: 8px; border: 1px dashed #fbbf24; }
+        .schedule-modal .act-cost { color: #10b981; font-weight: 700; text-align: right; font-size: 14px; }
+        .schedule-modal .modal-footer { display: flex; gap: 12px; justify-content: flex-end; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+        .schedule-modal .btn-secondary { background: white; border: 2px solid #e5e7eb; color: #64748b; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .schedule-modal .btn-secondary:hover { border-color: #667eea; color: #667eea; }
+        .schedule-modal .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+        .schedule-modal .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </main>
   );

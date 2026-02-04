@@ -36,6 +36,10 @@ export default function AIPage() {
     const [scheduleResult, setScheduleResult] = useState<any>(null);
     const [scheduleLoading, setScheduleLoading] = useState(false);
     const [usageInfo, setUsageInfo] = useState<any>(null);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [paymentQR, setPaymentQR] = useState("");
+    const [paymentDetails, setPaymentDetails] = useState<any>(null);
+    const [paymentOrder, setPaymentOrder] = useState<any>(null);
 
     const chatEndRef = React.useRef<HTMLDivElement>(null);
 
@@ -165,6 +169,48 @@ export default function AIPage() {
         }
     };
 
+    const handleAIPayment = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Vui lòng đăng nhập để thanh toán');
+            return;
+        }
+
+        try {
+            // 1. Get Payment Info
+            const payInfoRes = await fetch('http://localhost:5191/api/Order/GetPaymentInfo');
+            const payInfo = await payInfoRes.json();
+            setPaymentDetails(payInfo);
+
+            // 2. Create AI Payment Order
+            const orderRes = await fetch('http://localhost:5191/api/AIChat/CreateAIPaymentOrder', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (orderRes.ok) {
+                const orderData = await orderRes.json();
+                const orderId = orderData.orderId;
+                const amount = orderData.amount;
+
+                // 3. Generate VietQR URL
+                const qrUrl = `https://img.vietqr.io/image/${payInfo.bankBin}-${payInfo.accountNo}-${payInfo.template}.png?amount=${amount}&addInfo=${encodeURIComponent("GOWHERE AI " + orderId)}&accountName=${encodeURIComponent(payInfo.accountName)}`;
+
+                setPaymentQR(qrUrl);
+                setPaymentOrder({ id: orderId, total: amount });
+                setShowPaymentModal(true);
+            } else {
+                const error = await orderRes.json();
+                alert(error.message || 'Có lỗi xảy ra khi tạo đơn hàng');
+            }
+        } catch (error) {
+            console.error('Payment error:', error);
+            alert('Không thể kết nối đến server');
+        }
+    };
+
     return (
         <main className="ai-page">
             <div className="ai-hero">
@@ -176,13 +222,58 @@ export default function AIPage() {
 
             <div className="container">
                 {usageInfo && (
-                    <div className="usage-banner">
+                    <div className={`usage-banner ${usageInfo.requiresPayment ? 'payment-required' : ''}`}>
                         <div className="usage-info">
-                            <CheckCircleFilled style={{ color: '#10b981', fontSize: '20px' }} />
+                            <CheckCircleFilled style={{ color: usageInfo.requiresPayment ? '#f59e0b' : '#10b981', fontSize: '20px' }} />
                             <span>
-                                Bạn còn <strong>{usageInfo.remainingFreeRequests}</strong> lượt tạo lịch trình miễn phí
-                                {usageInfo.requiresPayment && ` • Cần thanh toán ${money(usageInfo.paymentAmount)} VND để tiếp tục`}
+                                {usageInfo.requiresPayment ? (
+                                    <>
+                                        Bạn đã hết lượt tạo lịch trình miễn phí. Thanh toán <strong>{money(usageInfo.paymentAmount)} VND</strong> để sử dụng không giới hạn!
+                                    </>
+                                ) : (
+                                    <>
+                                        Bạn còn <strong>{usageInfo.remainingFreeRequests}</strong> lượt tạo lịch trình miễn phí
+                                    </>
+                                )}
                             </span>
+                        </div>
+                        {usageInfo.requiresPayment && (
+                            <button className="payment-btn" onClick={handleAIPayment}>
+                                💳 Thanh toán ngay
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Payment Modal */}
+                {showPaymentModal && paymentOrder && (
+                    <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
+                        <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
+                            <div className="pay-header">
+                                <h3>Xác nhận thanh toán AI Unlimited</h3>
+                                <button className="btn-close" onClick={() => setShowPaymentModal(false)}>✕</button>
+                            </div>
+                            <div className="pay-body">
+                                <div className="qr-box">
+                                    <img src={paymentQR} alt="VietQR Payment" />
+                                    <div className="qr-hint">Sử dụng ứng dụng Ngân hàng hoặc Ví điện tử để quét mã QR</div>
+                                </div>
+                                <div className="pay-info-summary">
+                                    <div className="p-row"><span>Mã đơn hàng:</span> <strong>#AI-{paymentOrder.id}</strong></div>
+                                    <div className="p-row"><span>Số tiền:</span> <strong className="p-amount">{money(paymentOrder.total)} VND</strong></div>
+                                    <div className="p-row"><span>Nội dung:</span> <strong>GOWHERE AI {paymentOrder.id}</strong></div>
+                                    <div className="p-row"><span>Chủ tài khoản:</span> <strong>{paymentDetails?.accountName}</strong></div>
+                                </div>
+                                <div className="pay-notice">
+                                    <CheckCircleFilled /> Sau khi thanh toán thành công, bạn có thể tạo lịch trình không giới hạn!
+                                </div>
+                            </div>
+                            <div className="pay-footer">
+                                <button className="btn-primary full" onClick={() => {
+                                    setShowPaymentModal(false);
+                                    checkUsageLimit(); // Refresh usage info
+                                }}>Tôi đã thanh toán xong</button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -395,9 +486,34 @@ export default function AIPage() {
         .ai-hero h1 { font-size: 48px; font-weight: 800; margin-bottom: 16px; }
         .ai-hero p { font-size: 20px; opacity: 0.9; }
 
-        .usage-banner { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px 30px; border-radius: 16px; margin-bottom: 40px; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3); }
+        .usage-banner { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px 30px; border-radius: 16px; margin-bottom: 40px; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+        .usage-banner.payment-required { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3); }
         .usage-info { display: flex; align-items: center; gap: 12px; font-size: 16px; }
         .usage-info strong { font-weight: 800; }
+        .payment-btn { background: white; color: #f59e0b; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 15px; white-space: nowrap; }
+        .payment-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3); }
+
+        /* Payment Modal */
+        .payment-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 10000; display: grid; place-items: center; padding: 20px; animation: fadeIn 0.2s; }
+        .payment-modal { background: white; width: 100%; max-width: 440px; border-radius: 24px; overflow: hidden; box-shadow: 0 30px 60px -12px rgba(0,0,0,0.25); animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .pay-header { padding: 20px 24px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+        .pay-header h3 { margin: 0; font-size: 18px; color: #1e293b; }
+        .btn-close { background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer; transition: 0.2s; }
+        .btn-close:hover { color: #64748b; transform: rotate(90deg); }
+        .pay-body { padding: 24px; }
+        .qr-box { background: #f8fafc; border-radius: 16px; padding: 20px; text-align: center; border: 1px solid #e2e8f0; margin-bottom: 24px; }
+        .qr-box img { width: 240px; height: 240px; background: white; padding: 10px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #f1f5f9; }
+        .qr-hint { font-size: 12px; color: #64748b; font-weight: 500; }
+        .pay-info-summary { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+        .p-row { display: flex; justify-content: space-between; font-size: 14px; }
+        .p-row span { color: #64748b; }
+        .p-row strong { color: #1e293b; }
+        .p-amount { color: #f59e0b !important; font-size: 18px; }
+        .pay-notice { background: #f0fdf4; color: #16a34a; padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 600; display: flex; gap: 8px; align-items: center; }
+        .pay-footer { padding: 0 24px 24px 24px; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+        .btn-primary.full { width: 100%; }
 
         .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
         @media (max-width: 1024px) { .ai-grid { grid-template-columns: 1fr; } }
@@ -472,6 +588,7 @@ export default function AIPage() {
         @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
       `}</style>
         </main>
     );

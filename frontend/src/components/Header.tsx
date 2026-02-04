@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { UserOutlined, CalendarOutlined, LogoutOutlined } from '@ant-design/icons';
+import { UserOutlined, CalendarOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
 
 const Header = ({ onAuthClick }: { onAuthClick: (v: 'login' | 'signup') => void }) => {
     const [scrolled, setScrolled] = useState(false);
     const [user, setUser] = useState<string | null>(null);
     const [fullName, setFullName] = useState<string | null>(null);
+    const [role, setRole] = useState<string | null>(null);
     const [showDropdown, setShowDropdown] = useState(false);
 
     useEffect(() => {
@@ -15,6 +16,7 @@ const Header = ({ onAuthClick }: { onAuthClick: (v: 'login' | 'signup') => void 
         // Check local storage for user info
         setUser(localStorage.getItem('username'));
         setFullName(localStorage.getItem('fullname'));
+        setRole(localStorage.getItem('role'));
 
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
@@ -77,6 +79,16 @@ const Header = ({ onAuthClick }: { onAuthClick: (v: 'login' | 'signup') => void 
                                         <Link href="/history" className="dropdown-item">
                                             <CalendarOutlined /> Lịch sử AI
                                         </Link>
+
+                                        {role === '2' && (
+                                            <>
+                                                <div className="dropdown-divider" />
+                                                <Link href="/admin" className="dropdown-item admin-item">
+                                                    <SettingOutlined /> Quản lý hệ thống
+                                                </Link>
+                                            </>
+                                        )}
+
                                         <div className="dropdown-divider" />
                                         <button className="dropdown-item logout-btn" onClick={handleLogout}>
                                             <LogoutOutlined /> Đăng xuất
@@ -122,6 +134,8 @@ const Header = ({ onAuthClick }: { onAuthClick: (v: 'login' | 'signup') => void 
           
           .dropdown-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; color: var(--ink); font-size: 14px; font-weight: 500; border-radius: 8px; cursor: pointer; border: none; background: none; width: 100%; text-align: left; transition: 0.2s; text-decoration: none; }
           .dropdown-item:hover { background: #f1f5f9; color: var(--brand); }
+          .dropdown-item.admin-item { color: #6366f1; font-weight: 700; }
+          .dropdown-item.admin-item:hover { background: #eef2ff; }
           .dropdown-item.logout-btn { color: #ef4444; }
           .dropdown-item.logout-btn:hover { background: #fef2f2; }
       `}</style>
