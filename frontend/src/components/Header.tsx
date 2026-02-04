@@ -37,6 +37,7 @@ const Header = ({ onAuthClick }: { onAuthClick: (v: 'login' | 'signup') => void 
                     </div>
                 </Link>
                 <nav className="main-nav">
+                    <Link href="/ai" style={{ color: '#667eea', fontWeight: '700' }}>Trợ lý</Link>
                     <Link href="/hotels">Khách sạn</Link>
                     <Link href="/flights">Vé máy bay</Link>
                     <Link href="/cars">Cho thuê xe</Link>
@@ -72,6 +73,9 @@ const Header = ({ onAuthClick }: { onAuthClick: (v: 'login' | 'signup') => void 
                                         </Link>
                                         <Link href="/itinerary" className="dropdown-item">
                                             <CalendarOutlined /> Hành trình của tôi
+                                        </Link>
+                                        <Link href="/history" className="dropdown-item">
+                                            <CalendarOutlined /> Lịch sử AI
                                         </Link>
                                         <div className="dropdown-divider" />
                                         <button className="dropdown-item logout-btn" onClick={handleLogout}>

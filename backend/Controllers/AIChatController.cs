@@ -93,5 +93,129 @@ namespace GoWhere_Api.Controllers
                 return StatusCode(500, new { Message = "An error occurred while generating schedule", Details = ex.Message, Stack = ex.StackTrace });
             }
         }
+
+        /// <summary>
+        /// Chat với AI trợ lý du lịch
+        /// </summary>
+        [HttpPost("Chat")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Chat([FromBody] AIChatRequestDto request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var result = await _aiChatService.ChatWithAIAsync(request);
+                return Ok(result);
+            }
+            catch (HttpRequestException ex)
+            {
+                return StatusCode(503, new { Message = "AI service temporarily unavailable", Details = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("CRITICAL CHAT ERROR: " + ex.ToString());
+                return StatusCode(500, new { Message = "An error occurred while chatting with AI", Details = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy lịch sử lịch trình AI của user
+        /// </summary>
+        [HttpGet("History")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetHistory()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized("User ID not found in token.");
+                }
+
+                var historyRepo = HttpContext.RequestServices.GetRequiredService<Repo.IRepo.IAIScheduleHistoryRepo>();
+                var history = await historyRepo.GetByUserIdAsync(int.Parse(userId));
+                
+                return Ok(history);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy chi tiết 1 lịch trình từ lịch sử
+        /// </summary>
+        [HttpGet("History/{id}")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetHistoryById(int id)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized("User ID not found in token.");
+                }
+
+                var historyRepo = HttpContext.RequestServices.GetRequiredService<Repo.IRepo.IAIScheduleHistoryRepo>();
+                var history = await historyRepo.GetByIdAsync(id);
+                
+                if (history == null || history.UserId != int.Parse(userId))
+                {
+                    return NotFound(new { Message = "Không tìm thấy lịch trình" });
+                }
+
+                return Ok(history);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Xóa lịch trình khỏi lịch sử
+        /// </summary>
+        [HttpDelete("History/{id}")]
+        [Authorize]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteHistory(int id)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized("User ID not found in token.");
+                }
+
+                var historyRepo = HttpContext.RequestServices.GetRequiredService<Repo.IRepo.IAIScheduleHistoryRepo>();
+                var history = await historyRepo.GetByIdAsync(id);
+                
+                if (history == null || history.UserId != int.Parse(userId))
+                {
+                    return NotFound(new { Message = "Không tìm thấy lịch trình" });
+                }
+
+                await historyRepo.DeleteAsync(id);
+                return Ok(new { Message = "Đã xóa lịch trình" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
+            }
+        }
     }
 }

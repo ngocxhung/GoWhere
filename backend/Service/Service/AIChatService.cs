@@ -13,6 +13,7 @@ namespace GoWhere_Api.Service.Service
         private readonly IAISuggestionRequestRepo _aiSuggestionRepo;
         private readonly IScenicSpotRepo _scenicSpotRepo;
         private readonly IProvinceRepo _provinceRepo;
+        private readonly IAIScheduleHistoryRepo _scheduleHistoryRepo;
         private readonly IConfiguration _configuration;
         private readonly HttpClient _httpClient;
         private const int FREE_REQUEST_LIMIT = 2;
@@ -22,12 +23,14 @@ namespace GoWhere_Api.Service.Service
             IAISuggestionRequestRepo aiSuggestionRepo,
             IScenicSpotRepo scenicSpotRepo,
             IProvinceRepo provinceRepo,
+            IAIScheduleHistoryRepo scheduleHistoryRepo,
             IConfiguration configuration,
             IHttpClientFactory httpClientFactory)
         {
             _aiSuggestionRepo = aiSuggestionRepo;
             _scenicSpotRepo = scenicSpotRepo;
             _provinceRepo = provinceRepo;
+            _scheduleHistoryRepo = scheduleHistoryRepo;
             _configuration = configuration;
             _httpClient = httpClientFactory.CreateClient();
         }
@@ -61,32 +64,90 @@ namespace GoWhere_Api.Service.Service
                 throw new InvalidOperationException($"Bạn đã hết lượt miễn phí. Vui lòng thanh toán {PAYMENT_PRICE:N0} VND để tiếp tục.");
             }
 
-            // 2. Get scenic spots data
-            var scenicSpots = await _scenicSpotRepo.GetScenicSpotsByProvinceIdAsync(request.ProvinceId);
-            var province = await _provinceRepo.GetProvinceByIdAsync(request.ProvinceId);
+            // 2. Get province - either from ID or search by name
+            Province? province = null;
+            if (request.ProvinceId > 0)
+            {
+                province = await _provinceRepo.GetProvinceByIdAsync(request.ProvinceId);
+            }
+            else if (!string.IsNullOrEmpty(request.Destination))
+            {
+                // Try to find province by destination name (lowercase comparison)
+                var allProvinces = await _provinceRepo.GetAllProvincesAsync();
+                var destinationLower = request.Destination.ToLower().Trim();
+                
+                // First try exact match
+                province = allProvinces.FirstOrDefault(p => 
+                    p.ProvinceName.ToLower().Trim() == destinationLower
+                );
+                
+                // If no exact match, try contains
+                if (province == null)
+                {
+                    province = allProvinces.FirstOrDefault(p => 
+                        destinationLower.Contains(p.ProvinceName.ToLower().Trim()) ||
+                        p.ProvinceName.ToLower().Trim().Contains(destinationLower)
+                    );
+                }
+            }
 
             if (province == null)
             {
-                throw new KeyNotFoundException($"Tỉnh với ID {request.ProvinceId} không tồn tại.");
+                throw new KeyNotFoundException($"Không tìm thấy tỉnh/thành phố '{request.Destination}'. Vui lòng thử lại với tên khác.");
             }
 
-            // 3. Filter by budget
+            // 3. Get scenic spots data
+            var scenicSpots = await _scenicSpotRepo.GetScenicSpotsByProvinceIdAsync(province.ProvinceId);
+
+            // 4. Filter by budget
             var filteredSpots = scenicSpots
                 .Where(s => s.EstimatedVisitPrice <= (double)(request.Budget / request.NumberOfDays))
                 .ToList();
 
-            // 4. Generate schedule using Gemini AI
+            // 5. Generate schedule using Gemini AI
             var aiResponse = await CallGeminiAPIAsync(request, filteredSpots, province);
 
-            // 5. Only increment request count after successful AI response
+            // 6. Only increment request count after successful AI response
             await IncrementRequestCountAsync(userId);
 
-            // 6. Parse and return response
+            // 7. Parse and return response
             var scheduleResponse = ParseAIResponse(aiResponse, filteredSpots, request);
             scheduleResponse.RemainingFreeRequests = FREE_REQUEST_LIMIT - (await _aiSuggestionRepo.GetRequestCountAsync(userId));
             scheduleResponse.RequiresPayment = scheduleResponse.RemainingFreeRequests <= 0;
 
+            // 8. Save to history
+            await SaveScheduleHistoryAsync(userId, request, province, scheduleResponse);
+
             return scheduleResponse;
+        }
+
+        private async Task SaveScheduleHistoryAsync(int userId, AIScheduleRequestDto request, Province province, AIScheduleResponseDto response)
+        {
+            try
+            {
+                var history = new AIScheduleHistory
+                {
+                    UserId = userId,
+                    Destination = request.Destination,
+                    ProvinceId = province.ProvinceId,
+                    Budget = request.Budget,
+                    NumberOfDays = request.NumberOfDays,
+                    TravelStyle = request.TravelStyle,
+                    CompanionType = request.CompanionType,
+                    Pax = request.Pax,
+                    ScheduleJson = JsonSerializer.Serialize(response),
+                    Summary = response.Summary,
+                    EstimatedTotalCost = response.EstimatedTotalCost,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _scheduleHistoryRepo.CreateAsync(history);
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the request
+                Console.WriteLine($"Failed to save schedule history: {ex.Message}");
+            }
         }
 
         private async Task IncrementRequestCountAsync(int userId)
@@ -286,6 +347,67 @@ CHỈ TRẢ VỀ JSON, KHÔNG THÊM TEXT NÀO KHÁC.
                     RequiresPayment = false
                 };
             }
+        }
+
+        public async Task<AIChatResponseDto> ChatWithAIAsync(AIChatRequestDto request)
+        {
+            var apiKey = _configuration["GeminiAPI:ApiKey"];
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                throw new InvalidOperationException("Gemini API Key not configured. Add 'GeminiAPI:ApiKey' to appsettings.json");
+            }
+
+            var modelName = "gemini-flash-latest";
+            var apiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/{modelName}:generateContent?key={apiKey}";
+
+            // Build chat prompt with context about GoWhere
+            var systemContext = @"Bạn là trợ lý du lịch thông minh của GoWhere - nền tảng du lịch Việt Nam. 
+Nhiệm vụ của bạn là:
+- Tư vấn về các địa điểm du lịch tại Việt Nam
+- Giúp khách hàng lên kế hoạch chuyến đi
+- Gợi ý các hoạt động, ẩm thực, văn hóa địa phương
+- Trả lời các câu hỏi về du lịch một cách thân thiện và chuyên nghiệp
+
+Hãy trả lời ngắn gọn, súc tích và hữu ích.";
+
+            var fullPrompt = $"{systemContext}\n\nKhách hàng hỏi: {request.Message}";
+
+            var requestBody = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        parts = new[]
+                        {
+                            new { text = fullPrompt }
+                        }
+                    }
+                }
+            };
+
+            var jsonContent = JsonSerializer.Serialize(requestBody);
+            var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(apiUrl, content);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Gemini API error: {response.StatusCode} - {error}");
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+            var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(responseBody);
+
+            var aiResponse = geminiResponse?.candidates?[0]?.content?.parts?[0]?.text ?? "Xin lỗi, tôi không thể trả lời câu hỏi này. Vui lòng thử lại.";
+
+            return new AIChatResponseDto
+            {
+                Response = aiResponse,
+                ConversationId = request.ConversationId ?? Guid.NewGuid().ToString(),
+                Timestamp = DateTime.UtcNow
+            };
         }
 
         // Gemini API Response Model

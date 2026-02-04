@@ -7,5 +7,6 @@ namespace GoWhere_Api.Service.IService
     {
         Task<AIScheduleResponseDto> GenerateScheduleAsync(int userId, AIScheduleRequestDto request);
         Task<AIUsageLimitResponseDto> CheckUsageLimitAsync(int userId);
+        Task<AIChatResponseDto> ChatWithAIAsync(AIChatRequestDto request);
     }
 }

@@ -21,6 +21,7 @@ namespace GoWhere_Api.Model
         public DbSet<Flight> Flights { get; set; }
         public DbSet<CarRental> CarRentals { get; set; }
         public DbSet<Activity> Activities { get; set; }
+        public DbSet<AIScheduleHistory> AIScheduleHistories { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
