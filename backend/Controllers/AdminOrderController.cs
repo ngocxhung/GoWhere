@@ -191,6 +191,45 @@ namespace GoWhere_Api.Controllers
         }
 
         /// <summary>
+        /// [ADMIN] Cập nhật trạng thái đơn hàng
+        /// </summary>
+        [HttpPatch("UpdateOrderStatus/{id}")]
+        public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] string newStatus)
+        {
+            try
+            {
+                var order = await _orderRepo.GetByIdAsync(id);
+                
+                if (order == null)
+                {
+                    return NotFound($"Order with ID {id} not found.");
+                }
+
+                // Không cho phép thay đổi status nếu đã Payed
+                if (order.Status == "Payed")
+                {
+                    return BadRequest("Cannot update status of a paid order.");
+                }
+
+                // Validate status
+                var validStatuses = new[] { "Pending", "WaitPayment", "Payed", "Cancelled" };
+                if (!validStatuses.Contains(newStatus))
+                {
+                    return BadRequest($"Invalid status. Valid values: {string.Join(", ", validStatuses)}");
+                }
+
+                order.Status = newStatus;
+                await _orderRepo.UpdateAsync(order);
+                
+                return Ok(new { Message = "Order status updated successfully.", NewStatus = newStatus });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Error updating order status", Details = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// [ADMIN] Hủy đơn hàng
         /// </summary>
         [HttpPatch("CancelOrder/{id}")]

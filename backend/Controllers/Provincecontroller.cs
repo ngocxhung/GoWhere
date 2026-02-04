@@ -16,7 +16,6 @@ namespace GoWhere_Api.Controllers
             _provinceService = provinceService;
         }
         [HttpGet("GetAllProvinces")]
-        [EnableQuery]
         public async Task<IActionResult> GetProvinces()
         {
             var provinces = await _provinceService.GetAllProvincesAsync();

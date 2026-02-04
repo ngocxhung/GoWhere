@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Header from './Header';
 import AuthModal from './AuthModal';
 
@@ -9,6 +10,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         open: false,
         view: 'login'
     });
+    
+    const pathname = usePathname();
+    const isAdminPage = pathname?.startsWith('/admin');
 
     useEffect(() => {
         const handleAuthEvent = (e: Event) => {
@@ -22,7 +26,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
     return (
         <>
-            <Header onAuthClick={(view) => setAuthModal({ open: true, view })} />
+            {!isAdminPage && <Header onAuthClick={(view) => setAuthModal({ open: true, view })} />}
 
             <main>
                 {children}

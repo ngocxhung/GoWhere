@@ -60,7 +60,13 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                     localStorage.setItem('username', formData.username);
                     localStorage.setItem('fullname', data.fullName);
                     localStorage.setItem('role', data.role);
-                    window.location.reload();
+                    
+                    // Redirect to admin page if role is Admin
+                    if (data.role === 'Admin') {
+                        window.location.href = '/admin';
+                    } else {
+                        window.location.reload();
+                    }
                 } else {
                     setError(data.message || 'Đăng nhập không thành công');
                 }

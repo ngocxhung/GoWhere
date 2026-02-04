@@ -24,7 +24,6 @@ namespace GoWhere_Api.Controllers
         /// Lấy tất cả địa điểm đã được duyệt (IsViewed = true)
         /// </summary>
         [HttpGet("GetAllScenicSpots")]
-        [EnableQuery]
         public async Task<IActionResult> GetScenicSpots()
         {
             try
@@ -118,7 +117,7 @@ namespace GoWhere_Api.Controllers
             try
             {
                 await _scenicSpotService.AddScenicSpotAsync(scenicSpotCreateDto);
-                return CreatedAtAction(nameof(GetScenicSpotById), null, new { Message = "Scenic spot created successfully. Status: Not viewed yet." });
+                return CreatedAtAction(null, "Add Scenic Spot");
             }
             catch (ArgumentException ex)
             {

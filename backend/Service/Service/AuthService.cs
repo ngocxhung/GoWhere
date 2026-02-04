@@ -1,4 +1,4 @@
-﻿using GoWhere_Api.Model;
+using GoWhere_Api.Model;
 using GoWhere_Api.Model.DTOs.Request;
 using GoWhere_Api.Model.DTOs.Response;
 using GoWhere_Api.Repo.IRepo;
@@ -24,13 +24,13 @@ namespace GoWhere_Api.Service.Service
                 {
                     throw new UnauthorizedAccessException("Invalid username or password.");
                 }
-                var token = await _tokenService.GenerateTokenAsync(user.UserId, user.Username, user.RoleId.ToString());
+                var token = await _tokenService.GenerateTokenAsync(user.UserId, user.Username, user.Role.RoleName);
                 return new LoginResponse 
                 { 
                     Token = token,
                     FullName = user.FullName,
                     UserId = user.UserId,
-                    Role = user.RoleId.ToString()
+                    Role = user.Role.RoleName  // Trả về RoleName ("Admin" hoặc "User") thay vì RoleId
                 };
 
             }
@@ -47,7 +47,7 @@ namespace GoWhere_Api.Service.Service
                 var user = await _userRepo.GetUserByUsernameAsync(loginDto.Username);
                 if (user.Username.ToLower().Equals("regularuser") || user.Username.ToLower().Equals("adminuser"))
                 {
-                    var token = await _tokenService.GenerateTokenAsync(user.UserId, user.Username, user.RoleId.ToString());
+                    var token = await _tokenService.GenerateTokenAsync(user.UserId, user.Username, user.Role.RoleName);
                     return new LoginResponse { Token = token };
                 }
                 else

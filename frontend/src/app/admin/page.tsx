@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+// import Header from '@/components/Header';
+// import Footer from '@/components/Footer';
 import {
     UserOutlined,
     EnvironmentOutlined,
@@ -14,7 +14,8 @@ import {
     EditOutlined,
     DeleteOutlined,
     CheckCircleOutlined,
-    SyncOutlined
+    SyncOutlined,
+    EyeOutlined
 } from '@ant-design/icons';
 
 const AdminPage = () => {
@@ -31,7 +32,7 @@ const AdminPage = () => {
 
     useEffect(() => {
         const role = localStorage.getItem('role');
-        if (role !== '2') {
+        if (role !== 'Admin') {
             window.location.href = '/';
         }
         fetchStats();
@@ -101,6 +102,29 @@ const AdminPage = () => {
         }
     };
 
+    const updateOrderStatus = async (orderId: number, newStatus: string) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`http://localhost:5191/api/AdminOrder/UpdateOrderStatus/${orderId}`, {
+                method: 'PATCH',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify(newStatus)
+            });
+            if (res.ok) {
+                alert('Đã cập nhật trạng thái!');
+                fetchData();
+            } else {
+                const err = await res.json();
+                alert(err.Message || 'Không thể cập nhật');
+            }
+        } catch (e) {
+            alert('Lỗi khi cập nhật');
+        }
+    };
+
     const deleteItem = async (id: number) => {
         if (!confirm('Bạn có chắc chắn muốn xóa?')) return;
         try {
@@ -125,15 +149,31 @@ const AdminPage = () => {
     const sidebarItems = [
         { id: 'dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
         { id: 'users', label: 'Người dùng', icon: <UserOutlined /> },
-        { id: 'spots', label: 'Địa điểm', icon: <EnvironmentOutlined /> },
-        { id: 'hotels', label: 'Khách sạn', icon: <HomeOutlined /> },
-        { id: 'cars', label: 'Cho thuê xe', icon: <CarOutlined /> },
-        { id: 'payments', label: 'Thanh toán', icon: <CreditCardOutlined /> },
+        // { id: 'spots', label: 'Địa điểm', icon: <EnvironmentOutlined /> },
+        // { id: 'hotels', label: 'Khách sạn', icon: <HomeOutlined /> },
+        // { id: 'cars', label: 'Cho thuê xe', icon: <CarOutlined /> },
+        { id: 'payments', label: 'Đơn hàng', icon: <CreditCardOutlined /> },
     ];
 
     return (
         <div className="admin-layout">
-            <Header onAuthClick={() => { }} />
+            <div className="admin-header">
+                <div className="admin-header-inner">
+                    <div className="brand-section">
+                        <div className="logo-admin">🏝️</div>
+                        <div>
+                            <h1>GoWhere Admin</h1>
+                            <p>Quản trị hệ thống</p>
+                        </div>
+                    </div>
+                    <div className="user-section">
+                        <span>{localStorage.getItem('fullname') || 'Admin'}</span>
+                        <button className="btn-logout" onClick={() => { localStorage.clear(); window.location.href = '/'; }}>
+                            Đăng xuất
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <main className="admin-main">
                 <aside className="admin-sidebar">
@@ -173,10 +213,7 @@ const AdminPage = () => {
                             <>
                                 {activeTab === 'dashboard' && <DashboardView stats={stats} />}
                                 {activeTab === 'users' && <UserManagement data={data} onDelete={deleteItem} />}
-                                {activeTab === 'spots' && <ScenicSpotManagement data={data} onDelete={deleteItem} />}
-                                {activeTab === 'hotels' && <HotelManagement data={data} />}
-                                {activeTab === 'cars' && <CarManagement data={data} />}
-                                {activeTab === 'payments' && <PaymentManagement data={data} onConfirm={confirmOrder} />}
+                                {activeTab === 'payments' && <PaymentManagement data={data} onConfirm={confirmOrder} onUpdateStatus={updateOrderStatus} />}
                             </>
                         )}
                     </div>
@@ -184,11 +221,23 @@ const AdminPage = () => {
             </main>
 
             <style jsx>{`
-                .admin-layout { min-height: 100vh; background: #f8fafc; }
+                .admin-layout { min-height: 100vh; background: #f1f5f9; }
+                
+                .admin-header { position: sticky; top: 0; z-index: 100; background: white; border-bottom: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+                .admin-header-inner { max-width: 1600px; margin: 0 auto; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+                .brand-section { display: flex; align-items: center; gap: 16px; }
+                .logo-admin { width: 48px; height: 48px; background: linear-gradient(135deg, #1ea1f2, #7bd3ff); border-radius: 12px; display: grid; place-items: center; font-size: 24px; }
+                .brand-section h1 { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
+                .brand-section p { font-size: 12px; color: #64748b; margin: 0; }
+                .user-section { display: flex; align-items: center; gap: 16px; }
+                .user-section span { font-weight: 600; color: #0f172a; }
+                .btn-logout { padding: 8px 16px; background: #fee2e2; color: #ef4444; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+                .btn-logout:hover { background: #fca5a5; }
+                
                 .admin-main { display: flex; max-width: 1600px; margin: 0 auto; gap: 0; min-height: calc(100vh - 80px); }
                 .admin-loading { text-align: center; padding: 100px; color: #6366f1; font-weight: 700; font-size: 18px; display: flex; align-items: center; justify-content: center; gap: 12px; }
                 
-                .admin-sidebar { width: 280px; background: white; border-right: 1px solid #e2e8f0; padding: 32px 16px; display: flex; flex-direction: column; position: sticky; top: 80px; height: calc(100vh - 80px); }
+                .admin-sidebar { width: 280px; background: white; border-right: 1px solid #e2e8f0; padding: 32px 16px; display: flex; flex-direction: column; position: sticky; top: 80px; height: calc(100vh - 80px); overflow-y: auto; }
                 .sidebar-header { padding: 0 16px 24px; border-bottom: 1px solid #f1f5f9; margin-bottom: 24px; }
                 .sidebar-header h3 { font-size: 18px; font-weight: 800; color: #0f172a; }
                 
@@ -229,55 +278,149 @@ const AdminPage = () => {
     );
 };
 
-const DashboardView = ({ stats }: any) => (
-    <div className="dashboard-grid">
-        {[
-            { label: 'Người dùng', value: stats.usersCount, icon: <UserOutlined />, color: '#6366f1' },
-            { label: 'Địa điểm', value: stats.spotsCount, icon: <EnvironmentOutlined />, color: '#10b981' },
-            { label: 'Doanh thu (VND)', value: (stats.revenue || 0).toLocaleString(), icon: <CreditCardOutlined />, color: '#f59e0b' },
-            { label: 'Đơn hàng', value: stats.ordersCount, icon: <SyncOutlined />, color: '#ec4899' },
-        ].map((stat, i) => (
-            <div key={i} className="stat-card">
-                <div className="stat-icon" style={{ background: `${stat.color}15`, color: stat.color }}>{stat.icon}</div>
-                <div className="stat-info">
-                    <h4>{stat.label}</h4>
-                    <strong>{stat.value}</strong>
+const DashboardView = ({ stats }: any) => {
+    const money = (x: number) => new Intl.NumberFormat("vi-VN").format(x);
+    
+    return (
+        <div>
+            <div className="welcome-banner">
+                <div className="welcome-content">
+                    <h2>Chào mừng trở lại, Admin!</h2>
+                    <p>Tổng quan hệ thống GoWhere</p>
+                </div>
+                <div className="welcome-emoji">📊</div>
+            </div>
+
+            <div className="stats-grid-dashboard">
+                <div className="stat-card-dash stat-blue">
+                    <div className="stat-icon-dash"><UserOutlined /></div>
+                    <div className="stat-info-dash">
+                        <div className="stat-num">{stats.usersCount || 0}</div>
+                        <div className="stat-lbl">Người dùng</div>
+                    </div>
+                </div>
+                
+                <div className="stat-card-dash stat-green">
+                    <div className="stat-icon-dash"><EnvironmentOutlined /></div>
+                    <div className="stat-info-dash">
+                        <div className="stat-num">{stats.spotsCount || 0}</div>
+                        <div className="stat-lbl">Địa điểm</div>
+                    </div>
+                </div>
+                
+                <div className="stat-card-dash stat-orange">
+                    <div className="stat-icon-dash"><HomeOutlined /></div>
+                    <div className="stat-info-dash">
+                        <div className="stat-num">{stats.hotelsCount || 0}</div>
+                        <div className="stat-lbl">Khách sạn</div>
+                    </div>
+                </div>
+                
+                <div className="stat-card-dash stat-cyan">
+                    <div className="stat-icon-dash"><CreditCardOutlined /></div>
+                    <div className="stat-info-dash">
+                        <div className="stat-num">{money(stats.revenue || 0)}</div>
+                        <div className="stat-lbl">Doanh thu</div>
+                    </div>
                 </div>
             </div>
-        ))}
-    </div>
-);
+
+            <div className="chart-section">
+                <div className="chart-card-full">
+                    <h3>Hoạt động hệ thống</h3>
+                    <div className="chart-placeholder">
+                        <DashboardOutlined style={{ fontSize: '64px', color: '#cbd5e1' }} />
+                        <p>Biểu đồ thống kê sẽ hiển thị tại đây</p>
+                    </div>
+                </div>
+            </div>
+
+            <style jsx>{`
+                .welcome-banner { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; padding: 36px 40px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: center; color: white; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.25); }
+                .welcome-content h2 { font-size: 32px; font-weight: 800; margin: 0 0 8px 0; }
+                .welcome-content p { font-size: 16px; opacity: 0.95; margin: 0; }
+                .welcome-emoji { font-size: 72px; opacity: 0.9; }
+
+                .stats-grid-dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
+                @media (max-width: 1200px) { .stats-grid-dashboard { grid-template-columns: repeat(2, 1fr); } }
+                
+                .stat-card-dash { background: white; padding: 28px; border-radius: 18px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 20px; transition: 0.3s; position: relative; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+                .stat-card-dash::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+                .stat-card-dash:hover { transform: translateY(-6px); box-shadow: 0 12px 28px rgba(0,0,0,0.1); }
+                
+                .stat-blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+                .stat-green::before { background: linear-gradient(90deg, #10b981, #34d399); }
+                .stat-orange::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+                .stat-cyan::before { background: linear-gradient(90deg, #1ea1f2, #0ea5e9); }
+                
+                .stat-icon-dash { width: 68px; height: 68px; border-radius: 16px; display: grid; place-items: center; font-size: 32px; flex-shrink: 0; }
+                .stat-blue .stat-icon-dash { background: #eff6ff; color: #3b82f6; }
+                .stat-green .stat-icon-dash { background: #ecfdf5; color: #10b981; }
+                .stat-orange .stat-icon-dash { background: #fffbeb; color: #f59e0b; }
+                .stat-cyan .stat-icon-dash { background: #f0f9ff; color: #1ea1f2; }
+                
+                .stat-info-dash { flex: 1; }
+                .stat-num { font-size: 36px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 8px; }
+                .stat-lbl { font-size: 14px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+                .chart-section { display: grid; gap: 24px; }
+                .chart-card-full { background: white; padding: 36px; border-radius: 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+                .chart-card-full h3 { font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 28px; }
+                .chart-placeholder { text-align: center; padding: 100px 40px; color: #94a3b8; }
+                .chart-placeholder p { margin-top: 20px; font-size: 15px; }
+            `}</style>
+        </div>
+    );
+};
 
 const UserManagement = ({ data, onDelete }: any) => (
-    <div className="admin-table-container">
-        <table>
+    <div className="table-wrapper-modern">
+        <table className="modern-table">
             <thead>
                 <tr>
                     <th>ID</th>
                     <th>Người dùng</th>
-                    <th>Email</th>
-                    <th>Số điện thoại</th>
-                    <th>Quyền</th>
+                    <th>Liên hệ</th>
+                    <th>Vai trò</th>
                     <th>Thao tác</th>
                 </tr>
             </thead>
             <tbody>
                 {data.map((u: any) => (
                     <tr key={u.userId}>
-                        <td>{u.userId}</td>
+                        <td><span className="id-badge">#{u.userId}</span></td>
                         <td>
-                            <div className="user-cell">
-                                <div className="avatar-sm">{u.username.charAt(0).toUpperCase()}</div>
-                                <span>{u.fullName || u.username}</span>
+                            <div className="user-cell-modern">
+                                <div className="avatar-modern">{u.username?.charAt(0).toUpperCase()}</div>
+                                <div className="user-info-col">
+                                    <strong>{u.fullName || u.username}</strong>
+                                    <span className="sub-text">@{u.username}</span>
+                                </div>
                             </div>
                         </td>
-                        <td>{u.email}</td>
-                        <td>{u.phoneNumber}</td>
-                        <td><span className={`badge ${u.roleId === 2 ? 'admin' : ''}`}>{u.roleId === 2 ? 'Admin' : 'User'}</span></td>
                         <td>
-                            <div className="actions">
-                                <button className="btn-icon"><EditOutlined /></button>
-                                <button className="btn-icon delete" onClick={() => onDelete(u.userId)} disabled={u.userId === 2}><DeleteOutlined /></button>
+                            <div className="contact-info">
+                                <span>{u.email}</span>
+                                <span className="sub-text">{u.phoneNumber}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span className={`role-badge ${u.roleId === 2 ? 'badge-admin' : 'badge-user'}`}>
+                                {u.roleId === 2 ? '👑 Admin' : '👤 User'}
+                            </span>
+                        </td>
+                        <td>
+                            <div className="action-buttons">
+                                <button className="action-btn edit-btn" title="Sửa"><EditOutlined /></button>
+                                <button 
+                                    className="action-btn delete-btn" 
+                                    onClick={() => onDelete(u.userId)} 
+                                    disabled={u.roleId === 2}
+                                    title="Xóa"
+                                    style={{ opacity: u.roleId === 2 ? 0.3 : 1, cursor: u.roleId === 2 ? 'not-allowed' : 'pointer' }}
+                                >
+                                    <DeleteOutlined />
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -285,7 +428,30 @@ const UserManagement = ({ data, onDelete }: any) => (
             </tbody>
         </table>
         <style jsx>{`
-            .badge.admin { background: #eef2ff; color: #6366f1; }
+            .table-wrapper-modern { background: white; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+            .modern-table { width: 100%; border-collapse: collapse; }
+            .modern-table thead { background: linear-gradient(to right, #f8fafc, #f1f5f9); }
+            .modern-table th { padding: 16px 20px; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+            .modern-table td { padding: 14px 20px; font-size: 14px; border-bottom: 1px solid #f1f5f9; }
+            .modern-table tbody tr { transition: 0.15s; }
+            .modern-table tbody tr:hover { background: #f8fafc; }
+            .id-badge { background: #eef2ff; color: #6366f1; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+            .user-cell-modern { display: flex; align-items: center; gap: 12px; }
+            .avatar-modern { width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; display: grid; place-items: center; font-weight: 800; font-size: 16px; }
+            .user-info-col { display: flex; flex-direction: column; gap: 2px; }
+            .user-info-col strong { font-size: 14px; font-weight: 700; }
+            .contact-info { display: flex; flex-direction: column; gap: 2px; }
+            .contact-info span { font-size: 13px; color: #475569; }
+            .sub-text { font-size: 12px; color: #94a3b8; }
+            .role-badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block; }
+            .badge-admin { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; }
+            .badge-user { background: #eff6ff; color: #3b82f6; }
+            .action-buttons { display: flex; gap: 8px; justify-content: center; }
+            .action-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; cursor: pointer; display: grid; place-items: center; font-size: 14px; transition: 0.2s; }
+            .edit-btn { color: #6366f1; }
+            .edit-btn:hover { background: #eef2ff; border-color: #6366f1; }
+            .delete-btn { color: #ef4444; }
+            .delete-btn:hover:not(:disabled) { background: #fef2f2; border-color: #ef4444; }
         `}</style>
     </div>
 );
@@ -390,45 +556,121 @@ const CarManagement = ({ data }: any) => (
     </div>
 );
 
-const PaymentManagement = ({ data, onConfirm }: any) => (
-    <div className="admin-table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>User</th>
-                    <th>Trạng thái</th>
-                    <th>Số tiền</th>
-                    <th>Ngày</th>
-                    <th>Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-                {data.map((o: any) => (
-                    <tr key={o.orderId}>
-                        <td>#ORD-{o.orderId.toString().padStart(4, '0')}</td>
-                        <td><strong>{o.user?.fullName || o.user?.username}</strong></td>
-                        <td>
-                            <span className={`badge ${o.status === 'Paid' || o.status === 'Payed' ? 'success' : 'warning'}`}>
-                                {o.status === 'Paid' || o.status === 'Payed' ? 'Đã thanh toán' : 'Chờ duyệt'}
-                            </span>
-                        </td>
-                        <td>{o.totalPrice.toLocaleString()} VND</td>
-                        <td>{new Date(o.orderDate).toLocaleDateString()}</td>
-                        <td>
-                            <div className="actions">
-                                {(o.status !== 'Paid' && o.status !== 'Payed') && (
-                                    <button className="btn-icon success" onClick={() => onConfirm(o.orderId)}><CheckCircleOutlined /></button>
-                                )}
-                                <button className="btn-icon delete"><DeleteOutlined /></button>
-                            </div>
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    </div>
-);
+const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
+    const money = (x: number) => new Intl.NumberFormat("vi-VN").format(x);
+
+    return (
+        <div className="orders-container">
+            <div className="orders-stats-mini">
+                <div className="mini-stat">
+                    <span className="mini-label">Tổng đơn</span>
+                    <strong>{data.length}</strong>
+                </div>
+                <div className="mini-stat">
+                    <span className="mini-label">Chờ thanh toán</span>
+                    <strong>{data.filter((o: any) => o.status === 'WaitPayment').length}</strong>
+                </div>
+                <div className="mini-stat">
+                    <span className="mini-label">Đã thanh toán</span>
+                    <strong>{data.filter((o: any) => o.status === 'Payed').length}</strong>
+                </div>
+            </div>
+
+            <div className="table-wrapper-payment">
+                <table className="payment-table">
+                    <thead>
+                        <tr>
+                            <th>Mã đơn</th>
+                            <th>Khách hàng</th>
+                            <th>Số tiền</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày tạo</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {data.map((o: any) => {
+                            const isPayed = o.status === 'Payed';
+                            
+                            return (
+                                <tr key={o.orderId} className={isPayed ? 'row-payed' : ''}>
+                                    <td>
+                                        <span className="order-id">#ORD-{o.orderId.toString().padStart(4, '0')}</span>
+                                    </td>
+                                    <td>
+                                        <div className="customer-cell">
+                                            <div className="customer-avatar">{(o.userName || o.user?.username || 'U').charAt(0).toUpperCase()}</div>
+                                            <div className="customer-info">
+                                                <strong>{o.userName || o.user?.username || 'N/A'}</strong>
+                                                <span>{o.userEmail || o.user?.email || ''}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><span className="price-cell">{money(o.totalPrice)} đ</span></td>
+                                    <td>
+                                        <select 
+                                            className={`status-dropdown status-${o.status.toLowerCase()}`}
+                                            value={o.status}
+                                            disabled={isPayed}
+                                            onChange={(e) => onUpdateStatus(o.orderId, e.target.value)}
+                                        >
+                                            <option value="Pending">🔵 Đang xử lý</option>
+                                            <option value="WaitPayment">🟡 Chờ thanh toán</option>
+                                            <option value="Payed">✅ Đã thanh toán</option>
+                                            <option value="Cancelled">❌ Đã hủy</option>
+                                        </select>
+                                    </td>
+                                    <td><span className="date-text">{new Date(o.orderDate).toLocaleDateString('vi-VN')}</span></td>
+                                    <td>
+                                        <button className="btn-view" title="Xem chi tiết">
+                                            <EyeOutlined /> Chi tiết
+                                        </button>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+            
+            <style jsx>{`
+                .orders-container { display: flex; flex-direction: column; gap: 24px; }
+                .orders-stats-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+                .mini-stat { background: white; padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; }
+                .mini-label { display: block; font-size: 12px; color: #64748b; margin-bottom: 6px; font-weight: 600; }
+                .mini-stat strong { font-size: 24px; color: #1ea1f2; font-weight: 800; }
+
+                .table-wrapper-payment { background: white; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+                .payment-table { width: 100%; border-collapse: collapse; }
+                .payment-table thead { background: linear-gradient(to right, #f8fafc, #f1f5f9); }
+                .payment-table th { padding: 16px 20px; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+                .payment-table td { padding: 14px 20px; font-size: 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+                .payment-table tbody tr { transition: 0.15s; }
+                .payment-table tbody tr:hover { background: #f8fafc; }
+                .row-payed { background: #f0fdf4; }
+                
+                .order-id { background: #eef2ff; color: #6366f1; padding: 5px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; }
+                .customer-cell { display: flex; align-items: center; gap: 12px; }
+                .customer-avatar { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #1ea1f2, #0ea5e9); color: white; display: grid; place-items: center; font-weight: 800; font-size: 14px; }
+                .customer-info { display: flex; flex-direction: column; gap: 2px; }
+                .customer-info strong { font-size: 14px; color: #0f172a; }
+                .customer-info span { font-size: 12px; color: #94a3b8; }
+                .price-cell { font-size: 16px; font-weight: 700; color: #1ea1f2; }
+                .date-text { color: #64748b; font-size: 13px; }
+                
+                .status-dropdown { padding: 7px 14px; border-radius: 20px; border: 1.5px solid; font-size: 12px; font-weight: 700; background: white; transition: 0.2s; outline: none; cursor: pointer; }
+                .status-dropdown:disabled { cursor: not-allowed; opacity: 0.7; }
+                .status-pending { background: #eff6ff; color: #3b82f6; border-color: #93c5fd; }
+                .status-waitpayment { background: #fffbeb; color: #f59e0b; border-color: #fcd34d; }
+                .status-payed { background: #ecfdf5; color: #10b981; border-color: #86efac; }
+                .status-cancelled { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
+                
+                .btn-view { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: #f0f9ff; border: 1px solid #bae6fd; color: #0284c7; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+                .btn-view:hover { background: #1ea1f2; color: white; border-color: #1ea1f2; }
+            `}</style>
+        </div>
+    );
+};
 
 const CloseOutlined = () => (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

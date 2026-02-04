@@ -7,7 +7,7 @@ namespace GoWhere_Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "2")] // RoleId = 2 is Admin
+    [Authorize(Roles = "Admin")] // Require role name "Admin"
     public class AdminController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

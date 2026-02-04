@@ -19,17 +19,17 @@ namespace GoWhere_Api.Repo.Repo
 
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
-            return await _context.Users.ToListAsync();
+            return await _context.Users.Include(u => u.Role).ToListAsync();
         }
 
         public async Task<User> GetUserByIdAsync(int id)
         {
-            return await _context.Users.FindAsync(id);
+            return await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.UserId == id);
         }
 
         public async Task<User> GetUserByUsernameAsync(string username)
         {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            return await _context.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Username == username);
         }
       
         public async Task<bool> IsUserNameExistAsync(string username)

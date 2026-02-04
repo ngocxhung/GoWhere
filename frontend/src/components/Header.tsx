@@ -80,7 +80,7 @@ const Header = ({ onAuthClick }: { onAuthClick: (v: 'login' | 'signup') => void 
                                             <CalendarOutlined /> Lịch sử AI
                                         </Link>
 
-                                        {role === '2' && (
+                                        {role === 'Admin' && (
                                             <>
                                                 <div className="dropdown-divider" />
                                                 <Link href="/admin" className="dropdown-item admin-item">
