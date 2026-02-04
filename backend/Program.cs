@@ -22,9 +22,50 @@ namespace GoWhere_Api
                 {
                     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
                 });
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            // Use default Swagger generation; security UI will be provided via injected JS in Swagger UI
-            builder.Services.AddSwaggerGen();
+            
+            // ✅ Configure Swagger with JWT Bearer Authentication
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "GoWhere API",
+                    Version = "v1",
+                    Description = "API for GoWhere Travel Platform - Vietnam Tourism",
+                    Contact = new Microsoft.OpenApi.Models.OpenApiContact
+                    {
+                        Name = "GoWhere Team",
+                        Email = "support@gowhere.vn"
+                    }
+                });
+
+                // Add JWT Authentication
+                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                    Scheme = "Bearer",
+                    BearerFormat = "JWT",
+                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                    Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n" +
+                                  "Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\n" +
+                                  "Example: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\""
+                });
+
+                options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+                {
+                    {
+                        new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                        {
+                            Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                            {
+                                Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        new string[] { }
+                    }
+                });
+            });
             
             // Add HttpClient for AI service
             builder.Services.AddHttpClient();
@@ -147,6 +188,7 @@ namespace GoWhere_Api
                 app.UseHttpsRedirection();
             }
 
+            app.UseAuthentication();  // ✅ Add this BEFORE UseAuthorization
             app.UseAuthorization();
 
             app.MapControllers();

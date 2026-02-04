@@ -168,6 +168,8 @@ namespace GoWhere_Api.Service.Service
                 throw new ArgumentOutOfRangeException(nameof(scenicSpotCreateDto.EstimatedVisitPrice), "Estimated visit price cannot be negative.");
             }
             
+            var uploadedMediaUrls = new List<string>();
+            
             try
             {
                 var scenicSpot = new ScenicSpot
@@ -180,6 +182,11 @@ namespace GoWhere_Api.Service.Service
                     Medias = new List<Media>()
                 };
                 
+                // ✅ FIX 1: INSERT TRƯỚC để có ScenicSpotId
+                await _scenicSpotRepo.AddScenicSpotAsync(scenicSpot);
+                // Giờ scenicSpot.ScenicSpotId đã có giá trị!
+                
+                // Upload files SAU KHI đã có ID
                 if (scenicSpotCreateDto.Medias != null && scenicSpotCreateDto.Medias.Any())
                 {
                     if (scenicSpotCreateDto.Medias.Sum(f => f.Length) > _maxFileSize)
@@ -189,27 +196,37 @@ namespace GoWhere_Api.Service.Service
                     
                     foreach (var mediaFile in scenicSpotCreateDto.Medias)
                     {
+                        // Upload với ID đúng
                         var mediaUrl = await _fileService.UploadFileAsync(mediaFile, scenicSpot.ScenicSpotId);
-                        scenicSpot.Medias.Add(new Media { MediaUrl = mediaUrl });
+                        uploadedMediaUrls.Add(mediaUrl);
+                        
+                        scenicSpot.Medias.Add(new Media 
+                        { 
+                            MediaUrl = mediaUrl,
+                            ScenicSpotId = scenicSpot.ScenicSpotId
+                        });
                     }
+                    
+                    // Update lại với Media
+                    await _scenicSpotRepo.UpdateSceneicSpotAsync(scenicSpot);
                 }
-                
-                await _scenicSpotRepo.AddScenicSpotAsync(scenicSpot);
             }
             catch (Exception ex)
             {
-                // Cleanup uploaded files if error
-                if (scenicSpotCreateDto.Medias != null)
+                // ✅ FIX 3: Cleanup với URL đã upload (ĐÚNG)
+                if (uploadedMediaUrls.Any())
                 {
-                    foreach (var mediaFile in scenicSpotCreateDto.Medias)
+                    foreach (var mediaUrl in uploadedMediaUrls)
                     {
                         try
                         {
-                            await _fileService.DeleteFileAsync(mediaFile.FileName);
+                            var fileName = Path.GetFileName(mediaUrl);
+                            await _fileService.DeleteFileAsync(fileName);
                         }
                         catch (Exception deleteEx)
                         {
-                            Debug.WriteLine($"Failed to delete file {mediaFile.FileName}: {deleteEx.Message}");
+                            var fileNameForLog = Path.GetFileName(mediaUrl);
+                            Debug.WriteLine($"Failed to delete file {fileNameForLog}: {deleteEx.Message}");
                         }
                     }
                 }
@@ -219,6 +236,8 @@ namespace GoWhere_Api.Service.Service
 
         public async Task UpdateScenicSpotAsync(int id, ScenicSpotRequestDto scenicSpotUpdateDto)
         {
+            var uploadedMediaUrls = new List<string>();
+            
             try
             {
                 var existingSpot = await _scenicSpotRepo.GetScenicSpotByIdAsync(id);
@@ -228,16 +247,75 @@ namespace GoWhere_Api.Service.Service
                     throw new KeyNotFoundException($"Scenic spot with ID {id} not found.");
                 }
 
-                // Update properties
+                // Update text properties
                 existingSpot.ScenicSpotName = scenicSpotUpdateDto.ScenicSpotName;
                 existingSpot.Description = scenicSpotUpdateDto.Description;
                 existingSpot.EstimatedVisitPrice = scenicSpotUpdateDto.EstimatedVisitPrice;
                 existingSpot.ProvinceId = scenicSpotUpdateDto.ProvinceId;
 
+                // ✅ FIX 2: XỬ LÝ MEDIA NẾU CÓ
+                if (scenicSpotUpdateDto.Medias != null && scenicSpotUpdateDto.Medias.Any())
+                {
+                    if (scenicSpotUpdateDto.Medias.Sum(f => f.Length) > _maxFileSize)
+                    {
+                        throw new Exception("Total media file size exceeds the maximum limit of 250 MB.");
+                    }
+                    
+                    // Option 1: XÓA ẢNH CŨ VÀ THÊM MỚI (Replace all)
+                    // Delete old media files
+                    if (existingSpot.Medias != null && existingSpot.Medias.Any())
+                    {
+                        foreach (var media in existingSpot.Medias.ToList())
+                        {
+                            try
+                            {
+                                var fileName = Path.GetFileName(media.MediaUrl);
+                                await _fileService.DeleteFileAsync(fileName);
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"Failed to delete old media file: {ex.Message}");
+                            }
+                        }
+                        existingSpot.Medias.Clear();
+                    }
+                    
+                    // Upload new media files
+                    foreach (var mediaFile in scenicSpotUpdateDto.Medias)
+                    {
+                        var mediaUrl = await _fileService.UploadFileAsync(mediaFile, id);
+                        uploadedMediaUrls.Add(mediaUrl);
+                        
+                        existingSpot.Medias.Add(new Media 
+                        { 
+                            MediaUrl = mediaUrl,
+                            ScenicSpotId = id
+                        });
+                    }
+                }
+
                 await _scenicSpotRepo.UpdateSceneicSpotAsync(existingSpot);
             }
             catch (Exception ex)
             {
+                // Cleanup newly uploaded files if error
+                if (uploadedMediaUrls.Any())
+                {
+                    foreach (var mediaUrl in uploadedMediaUrls)
+                    {
+                        try
+                        {
+                            var fileName = Path.GetFileName(mediaUrl);
+                            await _fileService.DeleteFileAsync(fileName);
+                        }
+                        catch (Exception deleteEx)
+                        {
+                            var fileNameForLog = Path.GetFileName(mediaUrl);
+                            Debug.WriteLine($"Failed to cleanup uploaded file {fileNameForLog}: {deleteEx.Message}");
+                        }
+                    }
+                }
+                
                 throw new ApplicationException($"An error occurred while updating scenic spot with ID {id}.", ex);
             }
         }
