@@ -4,6 +4,7 @@ namespace GoWhere_Api.Model.DTOs.Request
 {
     public class AIScheduleRequestDto
     {
+        public Coordinate? Location { get; set; }
         public int ProvinceId { get; set; }
 
         [Required(ErrorMessage = "Location is required.")]
@@ -31,5 +32,10 @@ namespace GoWhere_Api.Model.DTOs.Request
         public string CompanionType { get; set; }  // "Solo", "Couple", "Family", "Friends", "Group"
 
         public string? AdditionalRequirements { get; set; }  // Yêu cầu thêm từ user
+    }
+    public class Coordinate
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
 }

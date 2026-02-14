@@ -140,9 +140,7 @@ namespace GoWhere_Api.Controllers
                     return Unauthorized("User ID not found in token.");
                 }
 
-                var historyRepo = HttpContext.RequestServices.GetRequiredService<Repo.IRepo.IAIScheduleHistoryRepo>();
-                var history = await historyRepo.GetByUserIdAsync(int.Parse(userId));
-                
+                var history = await _aiChatService.GetHistoryByUserIdAsync(int.Parse(userId));
                 return Ok(history);
             }
             catch (Exception ex)
@@ -168,10 +166,9 @@ namespace GoWhere_Api.Controllers
                     return Unauthorized("User ID not found in token.");
                 }
 
-                var historyRepo = HttpContext.RequestServices.GetRequiredService<Repo.IRepo.IAIScheduleHistoryRepo>();
-                var history = await historyRepo.GetByIdAsync(id);
+                var history = await _aiChatService.GetHistoryByIdAsync(int.Parse(userId), id);
                 
-                if (history == null || history.UserId != int.Parse(userId))
+                if (history == null)
                 {
                     return NotFound(new { Message = "Không tìm thấy lịch trình" });
                 }
@@ -201,15 +198,13 @@ namespace GoWhere_Api.Controllers
                     return Unauthorized("User ID not found in token.");
                 }
 
-                var historyRepo = HttpContext.RequestServices.GetRequiredService<Repo.IRepo.IAIScheduleHistoryRepo>();
-                var history = await historyRepo.GetByIdAsync(id);
+                var deleted = await _aiChatService.DeleteHistoryAsync(int.Parse(userId), id);
                 
-                if (history == null || history.UserId != int.Parse(userId))
+                if (!deleted)
                 {
                     return NotFound(new { Message = "Không tìm thấy lịch trình" });
                 }
 
-                await historyRepo.DeleteAsync(id);
                 return Ok(new { Message = "Đã xóa lịch trình" });
             }
             catch (Exception ex)
@@ -235,75 +230,12 @@ namespace GoWhere_Api.Controllers
                     return Unauthorized("User ID not found in token.");
                 }
 
-                var aiSuggestionRepo = HttpContext.RequestServices.GetRequiredService<Repo.IRepo.IAISuggestionRequestRepo>();
-                var orderRepo = HttpContext.RequestServices.GetRequiredService<Repo.IRepo.IOrderRepo>();
-
-                var userIdInt = int.Parse(userId);
-                var aiRequest = await aiSuggestionRepo.GetByUserIdAsync(userIdInt);
-
-                // Check if already paid
-                if (aiRequest?.Order != null && aiRequest.Order.Status == "Payed")
-                {
-                    return BadRequest(new { Message = "Bạn đã thanh toán rồi!" });
-                }
-
-                // Check if already has pending payment order
-                if (aiRequest?.Order != null && aiRequest.Order.Status == "WaitPayment")
-                {
-                    return Ok(new 
-                    { 
-                        Message = "Đơn hàng đã tồn tại", 
-                        OrderId = aiRequest.Order.OrderId,
-                        Amount = 50000
-                    });
-                }
-
-                // Create new order for AI payment
-                var order = new Model.Order
-                {
-                    UserId = userIdInt,
-                    OrderDate = DateTime.Now,
-                    Status = "WaitPayment",
-                    TotalPrice = 50000,
-                    OrderItems = new List<Model.OrderItem>
-                    {
-                        new Model.OrderItem
-                        {
-                            ItemName = "AI Unlimited - Tạo lịch trình không giới hạn",
-                            Price = 50000,
-                            Quantity = 1,
-                            ServiceType = "AI"
-                        }
-                    }
-                };
-
-                await orderRepo.CreateAsync(order);
-
-                // Link order to AI request
-                if (aiRequest == null)
-                {
-                    aiRequest = new Model.AISuggestionRequest
-                    {
-                        UserId = userIdInt,
-                        Count = 0,
-                        Price = 50000,
-                        OrderId = order.OrderId
-                    };
-                    await aiSuggestionRepo.CreateAsync(aiRequest);
-                }
-                else
-                {
-                    aiRequest.OrderId = order.OrderId;
-                    aiRequest.Price = 50000;
-                    await aiSuggestionRepo.UpdateAsync(aiRequest);
-                }
-
-                return Ok(new 
-                { 
-                    Message = "Tạo đơn hàng thành công", 
-                    OrderId = order.OrderId,
-                    Amount = 50000
-                });
+                var result = await _aiChatService.CreateAIPaymentOrderAsync(int.Parse(userId));
+                return Ok(result);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
             }
             catch (Exception ex)
             {

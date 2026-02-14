@@ -143,11 +143,11 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                     </button>
                 </form>
 
-                <div className="auth-divider"><span>HOẶC</span></div>
-
-                <div className="auth-social">
-                    <button className="social-btn google">Tiếp tục với Google</button>
-                </div>
+                {view === 'login' && (
+                    <div className="auth-forgot">
+                        <span>Quên mật khẩu?</span>
+                    </div>
+                )}
 
                 <div className="auth-footer">
                     {view === 'login' ? (
@@ -179,15 +179,11 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
         .auth-submit:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-2px); }
         .auth-submit:disabled { opacity: 0.7; cursor: not-allowed; }
         
-        .auth-divider { position: relative; text-align: center; margin: 24px 0; }
-        .auth-divider::before { content: ""; position: absolute; left: 0; top: 50%; width: 100%; height: 1px; background: var(--line); }
-        .auth-divider span { position: relative; background: white; padding: 0 16px; font-size: 12px; font-weight: 700; color: var(--muted); }
+        .auth-forgot { text-align: center; margin: 16px 0 8px; font-size: 14px; }
+        .auth-forgot span { color: var(--brand); font-weight: 600; cursor: pointer; }
+        .auth-forgot span:hover { text-decoration: underline; }
 
-        .auth-social { margin-bottom: 24px; }
-        .social-btn { width: 100%; padding: 12px; border-radius: 12px; border: 1.5px solid var(--line); background: white; font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .social-btn:hover { background: #f8fafc; border-color: var(--brand); }
-
-        .auth-footer { text-align: center; font-size: 14px; color: var(--muted); }
+        .auth-footer { text-align: center; font-size: 14px; color: var(--muted); margin-top: 16px; }
         .auth-footer span { color: var(--brand); font-weight: 700; cursor: pointer; }
         .auth-footer span:hover { text-decoration: underline; }
 

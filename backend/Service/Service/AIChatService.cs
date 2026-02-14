@@ -14,6 +14,7 @@ namespace GoWhere_Api.Service.Service
         private readonly IScenicSpotRepo _scenicSpotRepo;
         private readonly IProvinceRepo _provinceRepo;
         private readonly IAIScheduleHistoryRepo _scheduleHistoryRepo;
+        private readonly IOrderRepo _orderRepo;
         private readonly IConfiguration _configuration;
         private readonly HttpClient _httpClient;
         private const int FREE_REQUEST_LIMIT = 2;
@@ -24,6 +25,7 @@ namespace GoWhere_Api.Service.Service
             IScenicSpotRepo scenicSpotRepo,
             IProvinceRepo provinceRepo,
             IAIScheduleHistoryRepo scheduleHistoryRepo,
+            IOrderRepo orderRepo,
             IConfiguration configuration,
             IHttpClientFactory httpClientFactory)
         {
@@ -31,6 +33,7 @@ namespace GoWhere_Api.Service.Service
             _scenicSpotRepo = scenicSpotRepo;
             _provinceRepo = provinceRepo;
             _scheduleHistoryRepo = scheduleHistoryRepo;
+            _orderRepo = orderRepo;
             _configuration = configuration;
             _httpClient = httpClientFactory.CreateClient();
         }
@@ -231,10 +234,15 @@ namespace GoWhere_Api.Service.Service
                 spotsInfo.AppendLine($"- {spot.ScenicSpotName}: {spot.Description}, Giá: {spot.EstimatedVisitPrice:N0} VND");
             }
 
+            var locationInfo = !string.IsNullOrEmpty(request.UserLocation) && request.UserLocation != "Hà Nội, Việt Nam"
+                ? $"- Vị trí xuất phát: {request.UserLocation} (tọa độ GPS)"
+                : "- Vị trí xuất phát: Chưa xác định (khách hàng chưa cung cấp hoặc từ chối quyền truy cập)";
+
             var prompt = $@"
 Bạn là chuyên gia tư vấn du lịch Việt Nam. Hãy tạo một lịch trình du lịch chi tiết cho khách hàng với thông tin sau:
 
 **Thông tin chuyến đi:**
+{locationInfo}
 - Điểm đến: {province.ProvinceName}
 - Ngân sách: {request.Budget:N0} VND
 - Số ngày: {request.NumberOfDays} ngày
@@ -433,6 +441,106 @@ Hãy trả lời ngắn gọn, súc tích và hữu ích.";
         private class Part
         {
             public string? text { get; set; }
+        }
+
+        // ============ HISTORY MANAGEMENT ============
+        public async Task<List<AIScheduleHistory>> GetHistoryByUserIdAsync(int userId)
+        {
+            return await _scheduleHistoryRepo.GetByUserIdAsync(userId);
+        }
+
+        public async Task<AIScheduleHistory?> GetHistoryByIdAsync(int userId, int historyId)
+        {
+            var history = await _scheduleHistoryRepo.GetByIdAsync(historyId);
+            
+            if (history == null || history.UserId != userId)
+            {
+                return null;
+            }
+
+            return history;
+        }
+
+        public async Task<bool> DeleteHistoryAsync(int userId, int historyId)
+        {
+            var history = await _scheduleHistoryRepo.GetByIdAsync(historyId);
+            
+            if (history == null || history.UserId != userId)
+            {
+                return false;
+            }
+
+            return await _scheduleHistoryRepo.DeleteAsync(historyId);
+        }
+
+        // ============ PAYMENT ORDER MANAGEMENT ============
+        public async Task<AIPaymentOrderResponseDto> CreateAIPaymentOrderAsync(int userId)
+        {
+            var aiRequest = await _aiSuggestionRepo.GetByUserIdAsync(userId);
+
+            // Check if already paid
+            if (aiRequest?.Order != null && aiRequest.Order.Status == "Payed")
+            {
+                throw new InvalidOperationException("Bạn đã thanh toán rồi!");
+            }
+
+            // Check if already has pending payment order
+            if (aiRequest?.Order != null && aiRequest.Order.Status == "WaitPayment")
+            {
+                return new AIPaymentOrderResponseDto
+                {
+                    Message = "Đơn hàng đã tồn tại",
+                    OrderId = aiRequest.Order.OrderId,
+                    Amount = 50000
+                };
+            }
+
+            // Create new order for AI payment
+            var order = new Order
+            {
+                UserId = userId,
+                OrderDate = DateTime.Now,
+                Status = "WaitPayment",
+                TotalPrice = 50000,
+                OrderItems = new List<OrderItem>
+                {
+                    new OrderItem
+                    {
+                        ItemName = "AI Unlimited - Tạo lịch trình không giới hạn",
+                        Price = 50000,
+                        Quantity = 1,
+                        ServiceType = "AI"
+                    }
+                }
+            };
+
+            await _orderRepo.CreateAsync(order);
+
+            // Link order to AI request
+            if (aiRequest == null)
+            {
+                aiRequest = new AISuggestionRequest
+                {
+                    UserId = userId,
+                    Count = 0,
+                    Price = 50000,
+                    OrderId = order.OrderId
+                };
+                await _aiSuggestionRepo.CreateAsync(aiRequest);
+            }
+            else
+            {
+                aiRequest.OrderId = order.OrderId;
+                aiRequest.Price = 50000;
+                await _aiSuggestionRepo.UpdateAsync(aiRequest);
+            }
+
+            return new AIPaymentOrderResponseDto
+            {
+                Message = "Tạo đơn hàng thành công",
+                OrderId = order.OrderId,
+                Amount = 50000
+            };
         }
     }
 }

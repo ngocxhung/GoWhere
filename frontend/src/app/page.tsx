@@ -47,6 +47,66 @@ type Province = { provinceId: number; provinceName: string };
 
 // --- Components ---
 
+const SocialFloatButtons = () => {
+  const [showMessengerTooltip, setShowMessengerTooltip] = useState(false);
+
+  return (
+    <div className="social-float-container">
+      {/* Facebook Icon */}
+      <a 
+        href="https://www.facebook.com/profile.php?id=61587150455623" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="social-float-btn facebook-btn"
+        title="Facebook Page"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+        </svg>
+      </a>
+
+      {/* Messenger Icon with Tooltip */}
+      <div 
+        className="messenger-wrapper"
+        onMouseEnter={() => setShowMessengerTooltip(true)}
+        onMouseLeave={() => setShowMessengerTooltip(false)}
+      >
+        <a 
+          href="https://m.me/961137500418471" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="social-float-btn messenger-btn"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.974 12-11.111C24 4.975 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8l3.131 3.259L19.752 8l-6.561 6.963z"/>
+          </svg>
+        </a>
+        {showMessengerTooltip && (
+          <div className="messenger-tooltip">
+            💬 Chat với chúng tôi
+          </div>
+        )}
+      </div>
+
+      <style jsx>{`
+        .social-float-container { position: fixed; right: 24px; bottom: 100px; z-index: 999; display: flex; flex-direction: column; gap: 12px; }
+        
+        .social-float-btn { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,0.2); transition: 0.3s; text-decoration: none; }
+        .social-float-btn:hover { transform: translateY(-4px) scale(1.05); box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
+        
+        .facebook-btn { background: #1877f2; color: white; }
+        .messenger-btn { background: linear-gradient(135deg, #00b2ff, #006aff); color: white; }
+        
+        .messenger-wrapper { position: relative; }
+        .messenger-tooltip { position: absolute; right: 70px; top: 50%; transform: translateY(-50%); background: #0f172a; color: white; padding: 10px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: tooltipSlide 0.3s ease-out; }
+        .messenger-tooltip::after { content: ''; position: absolute; right: -6px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 12px; height: 12px; background: #0f172a; }
+        
+        @keyframes tooltipSlide { from { opacity: 0; transform: translateY(-50%) translateX(-10px); } to { opacity: 1; transform: translateY(-50%) translateX(0); } }
+      `}</style>
+    </div>
+  );
+};
+
 const ReelsWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [index, setIndex] = useState(0);
@@ -367,14 +427,25 @@ const SearchSection = ({
     }
 
     setLocating(true);
-    let userLoc = "Hà Nội, Việt Nam"; // Default
+    let userLoc = ""; // Để trống nếu không lấy được
 
+    // Yêu cầu quyền truy cập vị trí
     if (navigator.geolocation) {
       try {
-        const pos = await new Promise<GeolocationPosition>((res, rej) => navigator.geolocation.getCurrentPosition(res, rej));
-        userLoc = `${pos.coords.latitude},${pos.coords.longitude}`;
+        const pos = await new Promise<GeolocationPosition>((res, rej) => {
+          navigator.geolocation.getCurrentPosition(res, rej, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          });
+        });
+        // Gửi tọa độ GPS
+        userLoc = `${pos.coords.latitude}, ${pos.coords.longitude}`;
+        console.log('Vị trí hiện tại:', userLoc);
       } catch (e) {
-        console.log("Could not get precise location, using default.");
+        console.log("Người dùng từ chối hoặc không thể lấy vị trí. Để trống userLocation.");
+        // Để trống, AI sẽ tự xử lý
+        userLoc = "";
       }
     }
     setLocating(false);
@@ -1102,6 +1173,7 @@ export default function Home() {
         </div>
       )}
 
+      <SocialFloatButtons />
       <ReelsWidget />
       <ChatWidget />
 
