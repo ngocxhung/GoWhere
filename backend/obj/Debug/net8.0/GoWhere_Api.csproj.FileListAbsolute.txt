@@ -155,10 +155,10 @@ D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\staticwebasse
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\staticwebassets.development.json
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\staticwebassets.build.endpoints.json
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\swae.build.ex.cache
-D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\GoWhere_.3FB2CEB5.Up2Date
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\GoWhere_Api.dll
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\refint\GoWhere_Api.dll
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\GoWhere_Api.pdb
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\GoWhere_Api.genruntimeconfig.cache
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\ref\GoWhere_Api.dll
+D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt

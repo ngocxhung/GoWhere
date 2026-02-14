@@ -37,6 +37,63 @@ namespace GoWhere_Api.Migrations
                     b.ToTable("CustomerScheduleScenicSpot");
                 });
 
+            modelBuilder.Entity("GoWhere_Api.Model.AIScheduleHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Budget")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CompanionType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Destination")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("EstimatedTotalCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("NumberOfDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Pax")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ProvinceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ScheduleJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TravelStyle")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProvinceId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AIScheduleHistories");
+                });
+
             modelBuilder.Entity("GoWhere_Api.Model.AISuggestionRequest", b =>
                 {
                     b.Property<int>("RequestId")
@@ -894,6 +951,28 @@ namespace GoWhere_Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("GoWhere_Api.Model.ProvinceMedia", b =>
+                {
+                    b.Property<int>("ProvinceMediaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProvinceMediaId"));
+
+                    b.Property<string>("MediaUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ProvinceId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ProvinceMediaId");
+
+                    b.HasIndex("ProvinceId");
+
+                    b.ToTable("ProvinceMedia");
+                });
+
             modelBuilder.Entity("GoWhere_Api.Model.Role", b =>
                 {
                     b.Property<int>("RoleId")
@@ -966,7 +1045,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 1,
                             Description = "Trái tim của thủ đô, biểu tượng văn hóa và lịch sử lâu đời của Hà Nội.",
                             EstimatedVisitPrice = 0.0,
-                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/e/e0/H%E1%BB%93_Ho%C3%A0n_Ki%E1%BA%BFm_-_Lake_of_the_Restored_Sword.jpg",
+                            ImageUrl = "https://statics.vinpearl.com/ho-hoan-kiem-21_1688885249.jpg",
                             IsViewed = true,
                             ProvinceId = 16,
                             ScenicSpotName = "Hồ Hoàn Kiếm"
@@ -976,7 +1055,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 2,
                             Description = "Trường đại học đầu tiên của Việt Nam, nơi lưu giữ tinh hoa đạo học.",
                             EstimatedVisitPrice = 30000.0,
-                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/8/82/Van_Mieu_Hanoi_April_2016.jpg",
+                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/3/39/Hanoi_Temple_of_Literature_%28cropped%29.jpg",
                             IsViewed = true,
                             ProvinceId = 16,
                             ScenicSpotName = "Văn Miếu - Quốc Tử Giám"
@@ -986,7 +1065,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 3,
                             Description = "Quần thể di tích gắn liền với lịch sử kinh thành Thăng Long - Đông Kinh.",
                             EstimatedVisitPrice = 30000.0,
-                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/C%E1%BB%95ng_%C4%90oan_M%C3%B4n_-_Ho%C3%A0ng_th%C3%A0nh_Th%C4%83ng_Long.jpg/2560px-C%E1%BB%95ng_%C4%90oan_M%C3%B4n_-_Ho%C3%A0ng_th%C3%A0nh_Th%C4%83ng_Long.jpg",
+                            ImageUrl = "https://booking.muongthanh.com/upload_images/images/2024%20-%20Nh/H%C3%A0/thoi-diem-du-lich-hoang-thanh.jpg",
                             IsViewed = true,
                             ProvinceId = 16,
                             ScenicSpotName = "Hoàng Thành Thăng Long"
@@ -996,7 +1075,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 4,
                             Description = "Nơi an nghỉ vĩnh hằng của Bác Hồ, vị lãnh tụ kính yêu của dân tộc.",
                             EstimatedVisitPrice = 0.0,
-                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/L%C4%83ng_Ch%E1%BB%A7_t%E1%BB%8Bch_H%E1%BB%93_Ch%C3%AD_Minh.jpg/2560px-L%C4%83ng_Ch%E1%BB%A7_t%E1%BB%8Bch_H%E1%BB%93_Ch%C3%AD_Minh.jpg",
+                            ImageUrl = "https://tuyengiao.hungyen.dcs.vn/ckfinder/userfiles/files/74176_lang_chu_tich_ho_chi_minh.jpg",
                             IsViewed = true,
                             ProvinceId = 16,
                             ScenicSpotName = "Lăng Chủ tịch Hồ Chí Minh"
@@ -1006,7 +1085,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 5,
                             Description = "Di sản thiên nhiên thế giới được UNESCO công nhận, nổi tiếng với hàng nghìn đảo đá vôi.",
                             EstimatedVisitPrice = 290000.0,
-                            ImageUrl = "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?auto=format&fit=crop&w=1600&q=80",
+                            ImageUrl = "https://tructhang.vn/wp-content/uploads/2022/08/Vinh-Ha-Long.jpg",
                             IsViewed = true,
                             ProvinceId = 15,
                             ScenicSpotName = "Vịnh Hạ Long"
@@ -1016,7 +1095,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 6,
                             Description = "Tổ hợp vui chơi giải trí đẳng cấp quốc tế với cáp treo Nữ Hoàng và nhiều trò chơi hấp dẫn.",
                             EstimatedVisitPrice = 700000.0,
-                            ImageUrl = "https://media.vneconomy.vn/images/upload/2022/04/28/vneconomy-sun-world-ha-long-complex.jpg",
+                            ImageUrl = "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/15/67/f6/b7/koi-bridge.jpg?w=800&h=-1&s=1",
                             IsViewed = true,
                             ProvinceId = 15,
                             ScenicSpotName = "Sun World Halong Complex"
@@ -1026,7 +1105,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 7,
                             Description = "Nóc nhà Đông Dương, điểm đến lý tưởng cho người yêu thích chinh phục độ cao.",
                             EstimatedVisitPrice = 800000.0,
-                            ImageUrl = "https://statics.vinpearl.com/dinh-fansipan-2_1665484834.JPG",
+                            ImageUrl = "https://cdn.nhandan.vn/images/1ef398c4e2fb4bf07980a2ded785b3ef6da51f0c0ad991901283c66f347bc9e41cdc313d33455da4eac4bf27a267b2d27b2ed0a2975eea26f660b08a23e7a81b8de59aec459e38ff71c8c3d5fb8fe5eb/f56e1b4cd551030f5a40-5896.jpg",
                             IsViewed = true,
                             ProvinceId = 1,
                             ScenicSpotName = "Đỉnh Fansipan"
@@ -1036,7 +1115,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 8,
                             Description = "Ngôi làng cổ đẹp như tranh của người H'Mông giữa núi rừng Tây Bắc.",
                             EstimatedVisitPrice = 70000.0,
-                            ImageUrl = "https://statics.vinpearl.com/ban-cat-cat-sapa-1_1629275464.jpg",
+                            ImageUrl = "https://sun-ecommerce-cdn.azureedge.net/ecommerce/service-sites/asset/SunWorldFansipan/google-doc/post_id_11991/AD_4nXcFbr9S0kZOTux5ZTU1MFeKboEVk3E1eVkj4oo7orF3nztmJHJ43YOtWfUF_KYGVg8MRlPbPOxbKIeNa3VzW8JrWiFTXWF3iTfXCePgXxjldnIzFz1O_MvavorG1XFWhGpVffCYa3YvNP-5rHbB2-fRGmE.webp",
                             IsViewed = true,
                             ProvinceId = 1,
                             ScenicSpotName = "Bản Cát Cát"
@@ -1046,7 +1125,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 9,
                             Description = "Di sản văn hóa và thiên nhiên thế giới, nổi tiếng với hệ thống hang động và sông nước.",
                             EstimatedVisitPrice = 250000.0,
-                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/e/e2/Trang_An_Landscape_Complex.jpg",
+                            ImageUrl = "https://ik.imagekit.io/tvlk/blog/2022/11/khu-du-lich-trang-an-2.jpg",
                             IsViewed = true,
                             ProvinceId = 23,
                             ScenicSpotName = "Khu du lịch Tràng An"
@@ -1056,7 +1135,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 10,
                             Description = "Ngôi chùa lớn nhất Đông Nam Á, sở hữu nhiều kỷ lục châu Á và Việt Nam.",
                             EstimatedVisitPrice = 0.0,
-                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/8/8b/Bai_Dinh_Pagoda.jpg",
+                            ImageUrl = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLGWPCIleB2i8_vXi0hdfoY8VYdTZClezzcQ&s",
                             IsViewed = true,
                             ProvinceId = 23,
                             ScenicSpotName = "Chùa Bái Đính"
@@ -1066,7 +1145,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 11,
                             Description = "Đường lên tiên cảnh với Cầu Vàng nổi tiếng thế giới và làng Pháp cổ kính.",
                             EstimatedVisitPrice = 850000.0,
-                            ImageUrl = "https://images.unsplash.com/photo-1559592442-7e182c9c6f10?auto=format&fit=crop&w=1600&q=80",
+                            ImageUrl = "https://asiaholiday.com.vn/pic/Tour/du-lich-da-nang-ba-na-hills_4865_HasThumb.jpg",
                             IsViewed = true,
                             ProvinceId = 32,
                             ScenicSpotName = "Bà Nà Hills"
@@ -1076,7 +1155,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 12,
                             Description = "Được tạp chí Forbes bình chọn là một trong những bãi biển quyến rũ nhất hành tinh.",
                             EstimatedVisitPrice = 0.0,
-                            ImageUrl = "https://statics.vinpearl.com/bien-my-khe-da-nang-1_1629853961.jpg",
+                            ImageUrl = "https://vcdn1-duc-lich.vnecdn.net/2023/03/01/bai-bien-my-khe-jpeg-167763815-6011-1898-1677638252.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=NeyKbOipMzANDXNICpGlRA",
                             IsViewed = true,
                             ProvinceId = 32,
                             ScenicSpotName = "Biển Mỹ Khê"
@@ -1086,7 +1165,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 13,
                             Description = "Quần thể 5 ngọn núi đá vôi với nhiều hang động và chùa chiền linh thiêng.",
                             EstimatedVisitPrice = 40000.0,
-                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/1/11/Marble_Mountains_Danang.jpg",
+                            ImageUrl = "https://danangfantasticity.com/wp-content/uploads/2025/08/danh-thang-ngu-hanh-son-da-nang-002.jpg",
                             IsViewed = true,
                             ProvinceId = 32,
                             ScenicSpotName = "Ngũ Hành Sơn"
@@ -1096,7 +1175,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 14,
                             Description = "Di sản văn hóa thế giới, nơi lưu giữ vẻ đẹp cổ kính và yên bình bên dòng sông Hoài.",
                             EstimatedVisitPrice = 0.0,
-                            ImageUrl = "https://images.unsplash.com/photo-1555921015-5532091f6026?auto=format&fit=crop&w=1600&q=80",
+                            ImageUrl = "https://daivietourist.vn/wp-content/uploads/2025/05/gioi-thieu-ve-pho-co-hoi-an-8.jpg",
                             IsViewed = true,
                             ProvinceId = 33,
                             ScenicSpotName = "Phố cổ Hội An"
@@ -1106,7 +1185,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 15,
                             Description = "Di tích lịch sử quan trọng, biểu tượng của sự thống nhất đất nước.",
                             EstimatedVisitPrice = 40000.0,
-                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/0/02/Independence_Palace_Saigon.jpg",
+                            ImageUrl = "https://cdn.vntrip.vn/cam-nang/wp-content/uploads/2017/09/2-8.jpg",
                             IsViewed = true,
                             ProvinceId = 45,
                             ScenicSpotName = "Dinh Độc Lập"
@@ -1116,7 +1195,7 @@ namespace GoWhere_Api.Migrations
                             ScenicSpotId = 16,
                             Description = "Biểu tượng văn hóa và thương mại lâu đời của Sài Gòn.",
                             EstimatedVisitPrice = 0.0,
-                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/9/91/Ben_Thanh_Market_Saigon.jpg",
+                            ImageUrl = "https://upload.wikimedia.org/wikipedia/commons/9/91/Ben_Thanh_market_2.jpg",
                             IsViewed = true,
                             ProvinceId = 45,
                             ScenicSpotName = "Chợ Bến Thành"
@@ -1201,6 +1280,24 @@ namespace GoWhere_Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("GoWhere_Api.Model.AIScheduleHistory", b =>
+                {
+                    b.HasOne("GoWhere_Api.Model.Province", "Province")
+                        .WithMany()
+                        .HasForeignKey("ProvinceId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("GoWhere_Api.Model.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Province");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("GoWhere_Api.Model.AISuggestionRequest", b =>
                 {
                     b.HasOne("GoWhere_Api.Model.Order", "Order")
@@ -1283,6 +1380,15 @@ namespace GoWhere_Api.Migrations
                     b.Navigation("ScenicSpot");
                 });
 
+            modelBuilder.Entity("GoWhere_Api.Model.ProvinceMedia", b =>
+                {
+                    b.HasOne("GoWhere_Api.Model.Province", "Province")
+                        .WithMany("Media")
+                        .HasForeignKey("ProvinceId");
+
+                    b.Navigation("Province");
+                });
+
             modelBuilder.Entity("GoWhere_Api.Model.ScenicSpot", b =>
                 {
                     b.HasOne("GoWhere_Api.Model.Province", "Province")
@@ -1317,6 +1423,8 @@ namespace GoWhere_Api.Migrations
 
             modelBuilder.Entity("GoWhere_Api.Model.Province", b =>
                 {
+                    b.Navigation("Media");
+
                     b.Navigation("ScenicSpots");
                 });
 
