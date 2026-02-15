@@ -282,6 +282,7 @@ Bạn là chuyên gia tư vấn du lịch Việt Nam. Hãy tạo một lịch tr
           ""description"": ""Mô tả chi tiết"",
           ""estimatedCost"": 0
         }}
+        
       ]
     }}
   ]

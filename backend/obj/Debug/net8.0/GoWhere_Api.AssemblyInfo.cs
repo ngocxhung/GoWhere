@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GoWhere_Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+46b0feb64494fd8014573e5bdb0f02c8767156f5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9f66545cc2199c9dad9a040f474e0e83affb2e8f")]
 [assembly: System.Reflection.AssemblyProductAttribute("GoWhere_Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GoWhere_Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

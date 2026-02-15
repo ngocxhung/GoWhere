@@ -929,13 +929,21 @@ export default function Home() {
   });
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
 
-  // Hà Nội demo videos
-  const hanoiVideos = [
-    '/media/short/16.mp4',
-    '/media/short/shutterstock_3725692797.mp4',
-    '/media/short/shutterstock_3775625057.mp4',
-    '/media/short/shutterstock_3857698879.mp4'
-  ];
+  // Videos theo tỉnh
+  const provinceVideos: Record<number, string[]> = {
+    16: [ // Hà Nội
+      '/media/short/16.mp4',
+      '/media/short/shutterstock_3725692797.mp4',
+      '/media/short/shutterstock_3775625057.mp4',
+      '/media/short/shutterstock_3857698879.mp4'
+    ],
+    33: [ // Quảng Nam
+      '/media/short/33.mp4'
+    ]
+  };
+
+  const currentVideos = scheduleProvinceId ? (provinceVideos[scheduleProvinceId] || []) : [];
+  const provinceName = scheduleProvinceId === 16 ? 'Hà Nội' : scheduleProvinceId === 33 ? 'Quảng Nam' : 'Điểm đến';
 
   useEffect(() => {
     const fetchTours = async () => {
@@ -1124,7 +1132,7 @@ export default function Home() {
             <Itinerary acts={itinerary} currentDay={currentDay} onDaySelect={setCurrentDay} totalCost={totalCost} aiResult={aiResult} />
           </div>
 
-          {scheduleProvinceId === 16 && (
+          {currentVideos.length > 0 && (
             <div className="video-column">
               <div className="video-sticky-wrapper">
                 <div className="video-carousel-wrapper">
@@ -1135,37 +1143,41 @@ export default function Home() {
                     playsInline
                     className="carousel-video"
                     key={currentVideoIndex}
-                    src={hanoiVideos[currentVideoIndex]}
+                    src={currentVideos[currentVideoIndex]}
                   />
                   
                   <div className="video-overlay-compact">
-                    <h4>Hà Nội</h4>
-                    <span>{currentVideoIndex + 1}/{hanoiVideos.length}</span>
+                    <h4>{provinceName}</h4>
+                    <span>{currentVideoIndex + 1}/{currentVideos.length}</span>
                   </div>
                   
-                  <button 
-                    className="video-nav-compact prev"
-                    onClick={() => setCurrentVideoIndex(prev => (prev - 1 + hanoiVideos.length) % hanoiVideos.length)}
-                  >
-                    ❮
-                  </button>
-                  
-                  <button 
-                    className="video-nav-compact next"
-                    onClick={() => setCurrentVideoIndex(prev => (prev + 1) % hanoiVideos.length)}
-                  >
-                    ❯
-                  </button>
-                  
-                  <div className="video-dots-compact">
-                    {hanoiVideos.map((_, idx) => (
-                      <div 
-                        key={idx}
-                        className={`dot-compact ${idx === currentVideoIndex ? 'active' : ''}`}
-                        onClick={() => setCurrentVideoIndex(idx)}
-                      />
-                    ))}
-                  </div>
+                  {currentVideos.length > 1 && (
+                    <>
+                      <button 
+                        className="video-nav-compact prev"
+                        onClick={() => setCurrentVideoIndex(prev => (prev - 1 + currentVideos.length) % currentVideos.length)}
+                      >
+                        ❮
+                      </button>
+                      
+                      <button 
+                        className="video-nav-compact next"
+                        onClick={() => setCurrentVideoIndex(prev => (prev + 1) % currentVideos.length)}
+                      >
+                        ❯
+                      </button>
+                      
+                      <div className="video-dots-compact">
+                        {currentVideos.map((_, idx) => (
+                          <div 
+                            key={idx}
+                            className={`dot-compact ${idx === currentVideoIndex ? 'active' : ''}`}
+                            onClick={() => setCurrentVideoIndex(idx)}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
