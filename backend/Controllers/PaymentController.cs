@@ -1,5 +1,6 @@
 using GoWhere_Api.Model.DTOs.Request;
 using GoWhere_Api.Service.IService;
+using GoWhere_Api.Service.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -11,10 +12,14 @@ namespace GoWhere_Api.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly IPaymentService _paymentService;
+        private readonly ILogger<PaymentController> _logger;
+        private readonly IEmailService _emailService;
 
-        public PaymentController(IPaymentService paymentService)
+        public PaymentController(IPaymentService paymentService, ILogger<PaymentController> logger, IEmailService emailService)
         {
+            _logger = logger;
             _paymentService = paymentService;
+            _emailService = emailService;
         }
 
         /// <summary>
@@ -114,6 +119,51 @@ namespace GoWhere_Api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { Success = false, Message = "Đã xảy ra lỗi", Details = ex.Message });
+            }
+        }
+        /// <summary>
+        /// Test gửi email hướng dẫn thanh toán (chỉ dùng cho mục đích test)
+        /// </summary>
+        /// <summary>
+        /// [TEST] Test gửi email
+        /// </summary>
+        [HttpPost("TestEmail")]
+        [Obsolete("Chỉ dùng cho mục đích test, không sử dụng trong môi trường production")]
+        [Authorize]
+        public async Task<IActionResult> TestEmail([FromQuery] string toEmail)
+        {
+            try
+            {
+                _logger.LogInformation($"Testing email to: {toEmail}");
+                //Find username 
+                var username = User.FindFirst(ClaimTypes.Name)?.Value;
+
+
+
+                await _emailService.SendPaymentCreatedEmailAsync(
+                    toEmail,
+                    username,
+                    99999,
+                    50000,
+                    "https://img.vietqr.io/image/970422-083001022003-compact2.png?amount=50000&addInfo=TEST&accountName=Test",
+                    "TEST99999"
+                );
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = $"✅ Email sent to {toEmail}"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Test email failed");
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Error = ex.Message,
+                    Inner = ex.InnerException?.Message
+                });
             }
         }
     }

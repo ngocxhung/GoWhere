@@ -7,10 +7,12 @@ namespace GoWhere_Api.Service.Service
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _configuration;
+        private readonly ILogger<EmailService> _logger;
 
-        public EmailService(IConfiguration configuration)
+        public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
         {
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task SendPaymentConfirmationEmailAsync(string toEmail, string userName, int orderId, double amount)
@@ -39,24 +41,29 @@ namespace GoWhere_Api.Service.Service
             {
                 throw new InvalidOperationException("Email settings not configured properly.");
             }
-
-            using var smtpClient = new SmtpClient(smtpHost, smtpPort)
+            try
             {
-                EnableSsl = true,
-                Credentials = new NetworkCredential(senderEmail, senderPassword)
-            };
-
-            var mailMessage = new MailMessage
+                var email = new MailMessage
+                {
+                    From = new MailAddress(senderEmail, senderName),
+                    Subject = subject,
+                    Body = body,
+                    IsBodyHtml = true
+                };
+                using(var smtp = new SmtpClient(smtpHost, smtpPort))
+                {
+                    smtp.Credentials = new NetworkCredential(senderEmail, senderPassword);
+                    smtp.EnableSsl = true;
+                    email.To.Add(toEmail);
+                    await smtp.SendMailAsync(email);
+                }
+            }
+            catch (Exception ex)
             {
-                From = new MailAddress(senderEmail, senderName),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = true
-            };
-
-            mailMessage.To.Add(toEmail);
-
-            await smtpClient.SendMailAsync(mailMessage);
+                _logger.LogError(ex, "Error sending email");
+                throw;
+            }
+            
         }
 
         private string GetPaymentConfirmationTemplate(string userName, int orderId, double amount)

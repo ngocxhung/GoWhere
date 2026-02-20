@@ -16,6 +16,7 @@ namespace GoWhere_Api.Service.Service
         private readonly IAIScheduleHistoryRepo _scheduleHistoryRepo;
         private readonly IOrderRepo _orderRepo;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AIChatService> _logger;
         private readonly HttpClient _httpClient;
         private const int FREE_REQUEST_LIMIT = 2;
         private const decimal PAYMENT_PRICE = 50000; // 50,000 VND
@@ -25,6 +26,7 @@ namespace GoWhere_Api.Service.Service
             IScenicSpotRepo scenicSpotRepo,
             IProvinceRepo provinceRepo,
             IAIScheduleHistoryRepo scheduleHistoryRepo,
+            ILogger<AIChatService> logger,
             IOrderRepo orderRepo,
             IConfiguration configuration,
             IHttpClientFactory httpClientFactory)
@@ -217,7 +219,7 @@ namespace GoWhere_Api.Service.Service
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync();
-                throw new HttpRequestException($"Gemini API error: {response.StatusCode} - {error}");
+                throw new InvalidOperationException($"Gemini API error: {response.StatusCode} - {error}");
             }
 
             var responseBody = await response.Content.ReadAsStringAsync();

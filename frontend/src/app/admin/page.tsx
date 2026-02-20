@@ -29,11 +29,18 @@ const AdminPage = () => {
         ordersCount: 0,
         revenue: 0
     });
+    const [autoRefreshing, setAutoRefreshing] = useState(false);
+    const [nextRefresh, setNextRefresh] = useState(10);
+    const [fullname, setFullname] = useState('Admin');
 
     useEffect(() => {
-        const role = localStorage.getItem('role');
-        if (role !== 'Admin') {
-            window.location.href = '/';
+        // Check role và get fullname từ localStorage (chỉ chạy ở client)
+        if (typeof window !== 'undefined') {
+            const role = localStorage.getItem('role');
+            if (role !== 'Admin') {
+                window.location.href = '/';
+            }
+            setFullname(localStorage.getItem('fullname') || 'Admin');
         }
         fetchStats();
     }, []);
@@ -41,6 +48,29 @@ const AdminPage = () => {
     useEffect(() => {
         if (activeTab !== 'dashboard') {
             fetchData();
+        }
+    }, [activeTab]);
+
+    // Auto-refresh cho tab payments
+    useEffect(() => {
+        if (activeTab === 'payments') {
+            // Countdown timer
+            const countdownInterval = setInterval(() => {
+                setNextRefresh(prev => prev > 0 ? prev - 1 : 10);
+            }, 1000);
+
+            // Auto-refresh mỗi 10 giây (silent mode)
+            const refreshInterval = setInterval(async () => {
+                setAutoRefreshing(true);
+                await fetchData(true);  // ✅ Silent = true, không show loading spinner
+                setAutoRefreshing(false);
+                setNextRefresh(10);
+            }, 10000);
+
+            return () => {
+                clearInterval(countdownInterval);
+                clearInterval(refreshInterval);
+            };
         }
     }, [activeTab]);
 
@@ -59,8 +89,8 @@ const AdminPage = () => {
         }
     };
 
-    const fetchData = async () => {
-        setLoading(true);
+    const fetchData = async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const token = localStorage.getItem('token');
             let endpoint = '';
@@ -82,7 +112,7 @@ const AdminPage = () => {
         } catch (e) {
             console.error('Fetch data failed');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
@@ -167,8 +197,13 @@ const AdminPage = () => {
                         </div>
                     </div>
                     <div className="user-section">
-                        <span>{localStorage.getItem('fullname') || 'Admin'}</span>
-                        <button className="btn-logout" onClick={() => { localStorage.clear(); window.location.href = '/'; }}>
+                        <span>{fullname}</span>
+                        <button className="btn-logout" onClick={() => { 
+                            if (typeof window !== 'undefined') {
+                                localStorage.clear(); 
+                                window.location.href = '/';
+                            }
+                        }}>
                             Đăng xuất
                         </button>
                     </div>
@@ -198,6 +233,15 @@ const AdminPage = () => {
                     <header className="content-header">
                         <h2>{sidebarItems.find(i => i.id === activeTab)?.label}</h2>
                         <div className="header-actions">
+                            {activeTab === 'payments' && (
+                                <div className="refresh-indicator">
+                                    {autoRefreshing ? (
+                                        <span className="refreshing"><SyncOutlined spin /> Đang làm mới...</span>
+                                    ) : (
+                                        <span className="countdown">🔄 Làm mới sau {nextRefresh}s</span>
+                                    )}
+                                </div>
+                            )}
                             {activeTab !== 'dashboard' && activeTab !== 'payments' && (
                                 <button className="btn primary btn-add">
                                     <PlusOutlined /> Thêm mới
@@ -249,6 +293,10 @@ const AdminPage = () => {
                 .admin-content { flex: 1; padding: 40px; }
                 .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
                 .content-header h2 { font-size: 28px; font-weight: 800; color: #0f172a; }
+                
+                .refresh-indicator { display: flex; align-items: center; gap: 10px; }
+                .refreshing { color: #1ea1f2; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+                .countdown { background: #f0f9ff; color: #0284c7; padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; border: 1px solid #bae6fd; }
                 
                 .btn-add { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 10px 20px; border-radius: 12px; }
                 
@@ -558,21 +606,24 @@ const CarManagement = ({ data }: any) => (
 
 const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
     const money = (x: number) => new Intl.NumberFormat("vi-VN").format(x);
+    
+    // Filter out null/undefined items
+    const validData = (data || []).filter((o: any) => o && o.orderId);
 
     return (
         <div className="orders-container">
             <div className="orders-stats-mini">
                 <div className="mini-stat">
                     <span className="mini-label">Tổng đơn</span>
-                    <strong>{data.length}</strong>
+                    <strong>{validData.length}</strong>
                 </div>
                 <div className="mini-stat">
                     <span className="mini-label">Chờ thanh toán</span>
-                    <strong>{data.filter((o: any) => o.status === 'WaitPayment').length}</strong>
+                    <strong>{validData.filter((o: any) => o.status === 'WaitPayment').length}</strong>
                 </div>
                 <div className="mini-stat">
                     <span className="mini-label">Đã thanh toán</span>
-                    <strong>{data.filter((o: any) => o.status === 'Payed').length}</strong>
+                    <strong>{validData.filter((o: any) => o.status === 'Payed').length}</strong>
                 </div>
             </div>
 
@@ -589,13 +640,14 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {data.map((o: any) => {
+                        {validData.map((o: any) => {
                             const isPayed = o.status === 'Payed';
+                            const orderId = o.orderId || o.OrderId || 0;
                             
                             return (
-                                <tr key={o.orderId} className={isPayed ? 'row-payed' : ''}>
+                                <tr key={orderId} className={isPayed ? 'row-payed' : ''}>
                                     <td>
-                                        <span className="order-id">#ORD-{o.orderId.toString().padStart(4, '0')}</span>
+                                        <span className="order-id">#ORD-{orderId.toString().padStart(4, '0')}</span>
                                     </td>
                                     <td>
                                         <div className="customer-cell">
@@ -606,13 +658,13 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td><span className="price-cell">{money(o.totalPrice)} đ</span></td>
+                                    <td><span className="price-cell">{money(o.totalPrice || 0)} đ</span></td>
                                     <td>
                                         <select 
-                                            className={`status-dropdown status-${o.status.toLowerCase()}`}
-                                            value={o.status}
+                                            className={`status-dropdown status-${(o.status || 'pending').toLowerCase()}`}
+                                            value={o.status || 'Pending'}
                                             disabled={isPayed}
-                                            onChange={(e) => onUpdateStatus(o.orderId, e.target.value)}
+                                            onChange={(e) => onUpdateStatus(orderId, e.target.value)}
                                         >
                                             <option value="Pending">🔵 Đang xử lý</option>
                                             <option value="WaitPayment">🟡 Chờ thanh toán</option>
@@ -620,7 +672,7 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                                             <option value="Cancelled">❌ Đã hủy</option>
                                         </select>
                                     </td>
-                                    <td><span className="date-text">{new Date(o.orderDate).toLocaleDateString('vi-VN')}</span></td>
+                                    <td><span className="date-text">{o.orderDate ? new Date(o.orderDate).toLocaleDateString('vi-VN') : 'N/A'}</span></td>
                                     <td>
                                         <button className="btn-view" title="Xem chi tiết">
                                             <EyeOutlined /> Chi tiết

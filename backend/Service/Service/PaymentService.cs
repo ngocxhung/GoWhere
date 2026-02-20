@@ -14,6 +14,7 @@ namespace GoWhere_Api.Service.Service
         private readonly IUserRepo _userRepo;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<PaymentService> _logger;
         private readonly HttpClient _httpClient;
         private const decimal AI_CHAT_PRICE = 50000; // 50,000 VND
 
@@ -23,6 +24,7 @@ namespace GoWhere_Api.Service.Service
             IUserRepo userRepo,
             IEmailService emailService,
             IConfiguration configuration,
+            ILogger<PaymentService> logger,
             IHttpClientFactory httpClientFactory)
         {
             _orderRepo = orderRepo;
@@ -31,6 +33,7 @@ namespace GoWhere_Api.Service.Service
             _emailService = emailService;
             _configuration = configuration;
             _httpClient = httpClientFactory.CreateClient();
+            _logger = logger;
         }
 
         public async Task<PaymentResponseDto> CreateAIChatPaymentAsync(int userId)
@@ -74,8 +77,9 @@ namespace GoWhere_Api.Service.Service
                     );
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while sending payment created email.");
                 // Log error nhưng không throw để không ảnh hưởng đến flow chính
             }
 
@@ -134,8 +138,9 @@ namespace GoWhere_Api.Service.Service
                     );
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error occurred while sending payment confirmation email.");
                 // Log error nhưng không throw để không ảnh hưởng đến flow chính
             }
 
@@ -179,7 +184,7 @@ namespace GoWhere_Api.Service.Service
 
             var amount = (int)order.TotalPrice;
             var description = $"AICHAT{order.OrderId}";
-            
+
             // VietQR API URL
             var apiUrl = $"https://img.vietqr.io/image/{bankBin}-{accountNo}-{template}.png?amount={amount}&addInfo={description}&accountName={accountName}";
 

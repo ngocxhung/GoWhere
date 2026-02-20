@@ -162,3 +162,8 @@ D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\GoWhere_Api.p
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\GoWhere_Api.genruntimeconfig.cache
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\ref\GoWhere_Api.dll
 D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt
+D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\bin\Debug\net8.0\BouncyCastle.Cryptography.dll
+D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\bin\Debug\net8.0\MailKit.dll
+D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\bin\Debug\net8.0\MimeKit.dll
+D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\bin\Debug\net8.0\System.Security.Cryptography.Pkcs.dll
+D:\Siêu Đồ Án Tốt Nghiệp\GoWhere\backend\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll
