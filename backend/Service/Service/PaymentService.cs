@@ -14,12 +14,14 @@ namespace GoWhere_Api.Service.Service
         private readonly IUserRepo _userRepo;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly INotificationService _notificationService;
         private readonly ILogger<PaymentService> _logger;
         private readonly HttpClient _httpClient;
         private const decimal AI_CHAT_PRICE = 50000; // 50,000 VND
 
         public PaymentService(
             IOrderRepo orderRepo,
+            INotificationService notificationService,
             IAISuggestionRequestRepo aiSuggestionRepo,
             IUserRepo userRepo,
             IEmailService emailService,
@@ -34,6 +36,7 @@ namespace GoWhere_Api.Service.Service
             _configuration = configuration;
             _httpClient = httpClientFactory.CreateClient();
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task<PaymentResponseDto> CreateAIChatPaymentAsync(int userId)
@@ -60,6 +63,21 @@ namespace GoWhere_Api.Service.Service
 
             // Tạo QR code thanh toán
             var paymentResponse = await GenerateVietQRAsync(createdOrder);
+            // Thông báo đến admin về đơn hàng mới
+            try
+            {
+                var orderId = createdOrder.OrderId;
+                var customerId = createdOrder.UserId;
+                var amount = createdOrder.TotalPrice;
+                var customerUserName = (await _userRepo.GetUserByIdAsync(customerId))?.Username ?? "Unknown";
+                await _notificationService.NotifyAdminNewOrderAsync(orderId, customerId, amount, customerUserName);
+                _logger.LogInformation("Admin notified about new order. OrderId: {OrderId}, CustomerId: {CustomerId}, Amount: {Amount}", orderId, customerId, amount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while notifying admin about new order. OrderId: {OrderId}, CustomerId: {CustomerId}, Amount: {Amount}", createdOrder.OrderId, createdOrder.UserId, createdOrder.TotalPrice);
+                // Log error nhưng không throw để không ảnh hưởng đến flow chính
+            }
 
             // Gửi email hướng dẫn thanh toán
             try
@@ -102,7 +120,21 @@ namespace GoWhere_Api.Service.Service
             // Cập nhật trạng thái đơn hàng
             order.Status = OrderStatus.Payed.ToString();
             await _orderRepo.UpdateAsync(order);
-
+            // Thông báo đến client về thanh toán thành công
+            try
+            {
+                var user = await _userRepo.GetUserByIdAsync(order.UserId);
+                if (user != null)
+                {
+                    await _notificationService.NotifyUserPaymentSuccessAsync(user.UserId, order.OrderId, order.TotalPrice);
+                    _logger.LogInformation("User notified about payment success. UserId: {UserId}, OrderId: {OrderId}, Amount: {Amount}", user.UserId, order.OrderId, order.TotalPrice);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while notifying user about payment success. UserId: {UserId}, OrderId: {OrderId}, Amount: {Amount}", order.UserId, order.OrderId, order.TotalPrice);
+                // Log error nhưng không throw để không ảnh hưởng đến flow chính
+            }
             // Cập nhật AISuggestionRequest
             var aiRequest = await _aiSuggestionRepo.GetByUserIdAsync(order.UserId);
             if (aiRequest != null)

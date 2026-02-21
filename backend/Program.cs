@@ -22,7 +22,6 @@ namespace GoWhere_Api
                 {
                     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
                 });
-            
             // ✅ Configure Swagger with JWT Bearer Authentication
             builder.Services.AddSwaggerGen(options =>
             {
@@ -50,7 +49,7 @@ namespace GoWhere_Api
                                   "Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\n" +
                                   "Example: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\""
                 });
-
+               
                 options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
                 {
                     {
@@ -98,6 +97,21 @@ namespace GoWhere_Api
                         ValidAudience = builder.Configuration["Jwt:Audience"],
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
                     };
+                    // Add SignalR Jwt Authentication
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notifications"))
+                            {
+                                context.Token = accessToken;
+                            }
+                            return Task.CompletedTask;
+                        }
+                    };
+
                 });
 
             builder.Services.AddEndpointsApiExplorer();
@@ -190,7 +204,7 @@ namespace GoWhere_Api
 
             app.UseAuthentication();  // ✅ Add this BEFORE UseAuthorization
             app.UseAuthorization();
-
+            app.MapHub<Hubs.NotificationHub>("/hubs/notifications");
             app.MapControllers();
 
             app.Run();
