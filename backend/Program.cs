@@ -68,7 +68,7 @@ namespace GoWhere_Api
             
             // Add HttpClient for AI service
             builder.Services.AddHttpClient();
-            
+            builder.Services.AddSignalR();
             builder.Services.Scan(s => s
                 .FromAssemblyOf<IUserRepo>()
                 .AddClasses(classes => classes
