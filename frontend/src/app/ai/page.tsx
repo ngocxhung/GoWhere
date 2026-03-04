@@ -56,7 +56,7 @@ export default function AIPage() {
         if (!token) return;
 
         try {
-            const response = await fetch('http://localhost:5191/api/AIChat/CheckUsageLimit', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/CheckUsageLimit`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -79,7 +79,7 @@ export default function AIPage() {
         setChatLoading(true);
 
         try {
-            const response = await fetch('http://localhost:5191/api/AIChat/Chat', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/Chat`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -134,7 +134,7 @@ export default function AIPage() {
                 }
             }
 
-            const response = await fetch('http://localhost:5191/api/AIChat/GenerateSchedule', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/GenerateSchedule`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -178,12 +178,12 @@ export default function AIPage() {
 
         try {
             // 1. Get Payment Info
-            const payInfoRes = await fetch('http://localhost:5191/api/Order/GetPaymentInfo');
+            const payInfoRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/GetPaymentInfo`);
             const payInfo = await payInfoRes.json();
             setPaymentDetails(payInfo);
 
             // 2. Create AI Payment Order
-            const orderRes = await fetch('http://localhost:5191/api/AIChat/CreateAIPaymentOrder', {
+            const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/CreateAIPaymentOrder`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -226,15 +226,15 @@ export default function AIPage() {
                         <div className="usage-info">
                             <CheckCircleFilled style={{ color: usageInfo.requiresPayment ? '#f59e0b' : '#10b981', fontSize: '20px' }} />
                             <span>
-                                {usageInfo.requiresPayment ? (
+                                {usageInfo.message || (usageInfo.requiresPayment ? (
                                     <>
-                                        Bạn đã hết lượt tạo lịch trình miễn phí. Thanh toán <strong>{money(usageInfo.paymentAmount)} VND</strong> để sử dụng không giới hạn!
+                                        Bạn đã hết lượt tạo lịch trình. Thanh toán <strong>{money(usageInfo.paymentAmount)} VND</strong> để nhận thêm 5 lượt!
                                     </>
                                 ) : (
                                     <>
-                                        Bạn còn <strong>{usageInfo.remainingFreeRequests}</strong> lượt tạo lịch trình miễn phí
+                                        Bạn còn <strong>{usageInfo.remainingFreeRequests}</strong> lượt tạo lịch trình.
                                     </>
-                                )}
+                                ))}
                             </span>
                         </div>
                         {usageInfo.requiresPayment && (
@@ -250,7 +250,7 @@ export default function AIPage() {
                     <div className="payment-modal-overlay" onClick={() => setShowPaymentModal(false)}>
                         <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
                             <div className="pay-header">
-                                <h3>Xác nhận thanh toán AI Unlimited</h3>
+                                <h3>Xác nhận thanh toán Gói AI (5 lượt)</h3>
                                 <button className="btn-close" onClick={() => setShowPaymentModal(false)}>✕</button>
                             </div>
                             <div className="pay-body">
@@ -265,7 +265,7 @@ export default function AIPage() {
                                     <div className="p-row"><span>Chủ tài khoản:</span> <strong>{paymentDetails?.accountName}</strong></div>
                                 </div>
                                 <div className="pay-notice">
-                                    <CheckCircleFilled /> Sau khi thanh toán thành công, bạn có thể tạo lịch trình không giới hạn!
+                                    <CheckCircleFilled /> Sau khi thanh toán thành công, bạn sẽ có thêm 5 lượt tạo lịch trình AI!
                                 </div>
                             </div>
                             <div className="pay-footer">

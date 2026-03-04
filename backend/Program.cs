@@ -22,6 +22,9 @@ namespace GoWhere_Api
                 {
                     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
                 });
+
+            // Add SignalR
+            builder.Services.AddSignalR();
             // ✅ Configure Swagger with JWT Bearer Authentication
             builder.Services.AddSwaggerGen(options =>
             {
@@ -176,6 +179,14 @@ namespace GoWhere_Api
                         END
                     ");
                     Console.WriteLine("✅ AIScheduleHistories table checked/created successfully");
+
+                    // Add AllowedCount to AISuggestionRequests if not exists and sync existing data
+                    dbContext.Database.ExecuteSqlRaw(@"
+                        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'AISuggestionRequests' AND COLUMN_NAME = 'AllowedCount')
+                        BEGIN
+                            ALTER TABLE [dbo].[AISuggestionRequests] ADD [AllowedCount] INT DEFAULT 2 NOT NULL;
+                        END
+                    ");
                 }
                 catch (Exception ex)
                 {

@@ -22,7 +22,7 @@ export default function HistoryPage() {
         }
 
         try {
-            const response = await fetch('http://localhost:5191/api/AIChat/History', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/History`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -44,7 +44,7 @@ export default function HistoryPage() {
 
         const token = localStorage.getItem('token');
         try {
-            const response = await fetch(`http://localhost:5191/api/AIChat/History/${id}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/History/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`

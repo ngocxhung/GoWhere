@@ -17,7 +17,7 @@ export default function ProfilePage() {
             }
 
             try {
-                const res = await fetch('http://localhost:5191/api/Auth/Me', {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Auth/Me`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.ok) {

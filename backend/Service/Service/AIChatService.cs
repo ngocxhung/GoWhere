@@ -43,20 +43,23 @@ namespace GoWhere_Api.Service.Service
         public async Task<AIUsageLimitResponseDto> CheckUsageLimitAsync(int userId)
         {
             var aiRequest = await _aiSuggestionRepo.GetByUserIdAsync(userId);
-            var currentCount = aiRequest?.Count ?? 0;
-            var remainingRequests = Math.Max(0, FREE_REQUEST_LIMIT - currentCount);
-            var requiresPayment = currentCount >= FREE_REQUEST_LIMIT && (aiRequest?.Order == null || aiRequest.Order.Status != "Payed");
+            var currentUsed = aiRequest?.Count ?? 0;
+            // Ensure allowedTotal is at least FREE_REQUEST_LIMIT even if record exists with 0
+            var allowedTotal = Math.Max(aiRequest?.AllowedCount ?? 0, FREE_REQUEST_LIMIT);
+            
+            var remainingRequests = Math.Max(0, allowedTotal - currentUsed);
+            var requiresPayment = currentUsed >= allowedTotal;
 
             return new AIUsageLimitResponseDto
             {
-                TotalRequests = currentCount,
-                FreeLimit = FREE_REQUEST_LIMIT,
+                TotalRequests = currentUsed,
+                FreeLimit = allowedTotal, // Now dynamic
                 RemainingFreeRequests = remainingRequests,
                 RequiresPayment = requiresPayment,
                 PaymentAmount = requiresPayment ? PAYMENT_PRICE : 0,
                 Message = requiresPayment
-                    ? $"Bạn đã hết lượt tạo lịch trình miễn phí. Vui lòng thanh toán {PAYMENT_PRICE:N0} VND để tiếp tục."
-                    : $"Bạn còn {remainingRequests} lượt miễn phí."
+                    ? $"Bạn đã hết lượt tạo lịch trình. Vui lòng thanh toán {PAYMENT_PRICE:N0} VND để có thêm 5 lượt. (Đã dùng: {currentUsed}/{allowedTotal})"
+                    : $"Bạn còn {remainingRequests} lượt tạo lịch trình. (Hạn mức: {allowedTotal}, Đã dùng: {currentUsed})"
             };
         }
 
@@ -117,8 +120,8 @@ namespace GoWhere_Api.Service.Service
 
             // 7. Parse and return response
             var scheduleResponse = ParseAIResponse(aiResponse, filteredSpots, request);
-            scheduleResponse.RemainingFreeRequests = FREE_REQUEST_LIMIT - (await _aiSuggestionRepo.GetRequestCountAsync(userId));
-            scheduleResponse.RequiresPayment = scheduleResponse.RemainingFreeRequests <= 0;
+            scheduleResponse.RemainingFreeRequests = usageLimit.RemainingFreeRequests;
+            scheduleResponse.RequiresPayment = usageLimit.RequiresPayment;
             scheduleResponse.ProvinceId = province.ProvinceId;
 
             // 8. Save to history
@@ -162,24 +165,21 @@ namespace GoWhere_Api.Service.Service
         private async Task IncrementRequestCountAsync(int userId)
         {
             var aiRequest = await _aiSuggestionRepo.GetByUserIdAsync(userId);
-
             if (aiRequest == null)
             {
-                // Create new record
-                aiRequest = new AISuggestionRequest
+                var newReq = new AISuggestionRequest
                 {
                     UserId = userId,
                     Count = 1,
-                    Price = 0,
-                    OrderId = null
+                    AllowedCount = 2,
+                    Price = 0
                 };
-                await _aiSuggestionRepo.CreateAsync(aiRequest);
+                await _aiSuggestionRepo.CreateAsync(newReq);
             }
             else
             {
-                // Increment count
-                aiRequest.Count++;
-                await _aiSuggestionRepo.UpdateAsync(aiRequest);
+                // Now UpdateAsync uses direct SQL for Count++
+                await _aiSuggestionRepo.UpdateAsync(aiRequest); 
             }
         }
 
@@ -481,10 +481,10 @@ Hãy trả lời ngắn gọn, súc tích và hữu ích.";
         {
             var aiRequest = await _aiSuggestionRepo.GetByUserIdAsync(userId);
 
-            // Check if already paid
-            if (aiRequest?.Order != null && aiRequest.Order.Status == "Payed")
+            // Allow repayment if turns are exhausted
+            if (aiRequest != null && aiRequest.Count < aiRequest.AllowedCount)
             {
-                throw new InvalidOperationException("Bạn đã thanh toán rồi!");
+                throw new InvalidOperationException($"Bạn vẫn còn {aiRequest.AllowedCount - aiRequest.Count} lượt. Hãy sử dụng hết trước khi nạp thêm!");
             }
 
             // Check if already has pending payment order
@@ -509,7 +509,7 @@ Hãy trả lời ngắn gọn, súc tích và hữu ích.";
                 {
                     new OrderItem
                     {
-                        ItemName = "AI Unlimited - Tạo lịch trình không giới hạn",
+                        ItemName = "AI Package - 5 lượt tạo lịch trình",
                         Price = 50000,
                         Quantity = 1,
                         ServiceType = "AI"

@@ -30,8 +30,12 @@ namespace GoWhere_Api.Repo.Repo
 
         public async Task UpdateAsync(AISuggestionRequest request)
         {
-            _context.AISuggestionRequests.Update(request);
-            await _context.SaveChangesAsync();
+            if (request == null) return;
+
+            // Use direct SQL to increment count only to avoid overwriting AllowedCount
+            await _context.Database.ExecuteSqlRawAsync(
+                "UPDATE [AISuggestionRequests] SET [Count] = [Count] + 1 WHERE [UserId] = {0}", 
+                request.UserId);
         }
 
         public async Task<int> GetRequestCountAsync(int userId)
