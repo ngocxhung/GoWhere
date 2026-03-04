@@ -84,7 +84,7 @@ const Header = ({ onAuthClick }: { onAuthClick: (v: 'login' | 'signup') => void 
                                             <>
                                                 <div className="dropdown-divider" />
                                                 <Link href="/admin" className="dropdown-item admin-item">
-                                                    <SettingOutlined /> Quản lý hệ thống
+                                                    <SettingOutlined /> Quản lý thông tin
                                                 </Link>
                                             </>
                                         )}

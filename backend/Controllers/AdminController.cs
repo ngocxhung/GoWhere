@@ -67,6 +67,9 @@ namespace GoWhere_Api.Controllers
         [HttpPost("ScenicSpots")]
         public async Task<IActionResult> CreateScenicSpot([FromBody] ScenicSpot spot)
         {
+            // Set Province to null to avoid EF trying to create/update the province
+            spot.Province = null;
+            
             _context.ScenicSpots.Add(spot);
             await _context.SaveChangesAsync();
             return Ok(spot);
@@ -76,9 +79,37 @@ namespace GoWhere_Api.Controllers
         public async Task<IActionResult> UpdateScenicSpot(int id, [FromBody] ScenicSpot spot)
         {
             if (id != spot.ScenicSpotId) return BadRequest();
-            _context.Entry(spot).State = EntityState.Modified;
+
+            var existingSpot = await _context.ScenicSpots
+                .Include(s => s.Medias)
+                .FirstOrDefaultAsync(s => s.ScenicSpotId == id);
+
+            if (existingSpot == null) return NotFound();
+
+            // Update simple properties
+            existingSpot.ScenicSpotName = spot.ScenicSpotName;
+            existingSpot.Description = spot.Description;
+            existingSpot.EstimatedVisitPrice = spot.EstimatedVisitPrice;
+            existingSpot.IsViewed = spot.IsViewed;
+            existingSpot.ImageUrl = spot.ImageUrl;
+            existingSpot.ProvinceId = spot.ProvinceId;
+
+            // Update Medias: Delete all and re-add for simplicity
+            if (existingSpot.Medias != null)
+            {
+                _context.Set<Media>().RemoveRange(existingSpot.Medias);
+            }
+
+            if (spot.Medias != null)
+            {
+                existingSpot.Medias = spot.Medias.Select(m => new Media { 
+                    MediaUrl = m.MediaUrl, 
+                    ScenicSpotId = id 
+                }).ToList();
+            }
+
             await _context.SaveChangesAsync();
-            return Ok(spot);
+            return Ok(existingSpot);
         }
 
         [HttpDelete("ScenicSpots/{id}")]
@@ -129,13 +160,61 @@ namespace GoWhere_Api.Controllers
             var order = await _context.Orders.FindAsync(id);
             if (order == null) return NotFound();
             
-            order.Status = "Paid";
-            await _context.SaveChangesAsync();
-            
-            // If it was an AI Unlimited purchase, we might need to update the AISuggestionRequest limit
-            // (Assuming business logic handles this)
-            
-            return Ok(new { Message = "Order confirmed" });
+            Console.WriteLine($"[DEBUG] Confirming Order #{id}...");
+
+            try
+            {
+                // 1. Get User ID from Order (using a fresh look)
+                var orderInfo = await _context.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.OrderId == id);
+                if (orderInfo == null) return NotFound("Order not found");
+                int userId = orderInfo.UserId;
+                Console.WriteLine($"[DEBUG] Order #{id} belongs to User {userId}");
+
+                // 2. Update Order Status - Direct SQL
+                await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE Orders SET Status = 'Payed' WHERE OrderId = {0}", id);
+
+                // 3. Update AI Turns - Direct SQL with brackets for [Count]
+                // Setting to 25 to be absolutely sure we see a change
+                var affected = await _context.Database.ExecuteSqlRawAsync(
+                    @"UPDATE [AISuggestionRequests] 
+                      SET [AllowedCount] = 25, 
+                          [OrderId] = {0}, 
+                          [Price] = 55555 
+                      WHERE [UserId] = {1}", id, userId);
+
+                Console.WriteLine($"[DEBUG] SQL Update affected {affected} rows for User {userId}");
+
+                // 4. VERIFY IMMEDIATELY
+                var verify = await _context.AISuggestionRequests.AsNoTracking().FirstOrDefaultAsync(r => r.UserId == userId);
+                if (verify != null) {
+                    Console.WriteLine($"[DEBUG] VERIFIED IN DB: UserId={userId}, Count={verify.Count}, AllowedCount={verify.AllowedCount}, OrderId={verify.OrderId}");
+                } else {
+                    Console.WriteLine($"[DEBUG] VERIFY FAILED: No record found for User {userId} after update!");
+                }
+
+                if (affected == 0)
+                {
+                    Console.WriteLine($"[DEBUG] Creating new record as fallback...");
+                    var newReq = new AISuggestionRequest
+                    {
+                        UserId = userId,
+                        Count = 0,
+                        AllowedCount = 25,
+                        OrderId = id,
+                        Price = 50000
+                    };
+                    _context.AISuggestionRequests.Add(newReq);
+                    await _context.SaveChangesAsync();
+                }
+
+                return Ok(new { Message = "Success", UserId = userId, CurrentAllowed = verify?.AllowedCount });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] {ex.Message}");
+                return StatusCode(500, ex.Message);
+            }
         }
     }
 }

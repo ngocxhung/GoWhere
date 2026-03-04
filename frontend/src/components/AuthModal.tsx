@@ -53,36 +53,36 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
     // Validation functions
     const validateLogin = (): boolean => {
         const errors: Record<string, string> = {};
-        
+
         if (!formData.username.trim()) {
             errors.username = 'Vui lòng nhập tên đăng nhập';
         }
-        
+
         if (!formData.password) {
             errors.password = 'Vui lòng nhập mật khẩu';
         } else if (formData.password.length < 6) {
             errors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
         }
-        
+
         setFieldErrors(errors);
         return Object.keys(errors).length === 0;
     };
 
     const validateRegister = (): boolean => {
         const errors: Record<string, string> = {};
-        
+
         if (!formData.username.trim()) {
             errors.username = 'Vui lòng nhập tên đăng nhập';
         } else if (formData.username.length > 50) {
             errors.username = 'Tên đăng nhập không được quá 50 ký tự';
         }
-        
+
         if (!formData.password) {
             errors.password = 'Vui lòng nhập mật khẩu';
         } else if (formData.password.length < 6) {
             errors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
         }
-        
+
         if (!formData.email.trim()) {
             errors.email = 'Vui lòng nhập email';
         } else {
@@ -93,13 +93,13 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                 errors.email = 'Email không được quá 100 ký tự';
             }
         }
-        
+
         if (!formData.fullName.trim()) {
             errors.fullName = 'Vui lòng nhập họ và tên';
         } else if (formData.fullName.length > 100) {
             errors.fullName = 'Họ và tên không được quá 100 ký tự';
         }
-        
+
         setFieldErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -113,7 +113,7 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
         // Handle ModelState errors from backend
         if (errorData.errors) {
             const modelErrors = errorData.errors;
-            
+
             Object.keys(modelErrors).forEach(key => {
                 const fieldErrors = modelErrors[key];
                 if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
@@ -128,7 +128,7 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
 
                     if (fieldName) {
                         const err = fieldErrors[0]; // Take the first error
-                         // Translate common validation messages
+                        // Translate common validation messages
                         let translatedErr = err;
                         if (err.includes('required')) {
                             translatedErr = 'Thông tin này là bắt buộc';
@@ -141,15 +141,15 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                     }
                 }
             });
-            
+
             // If we found field errors, we might not need a general error.
             // But if ONLY general errors exist in "errors" (unlikely for ModelState), handle them.
         }
-        
+
         // Handle simple message errors or exceptions
         if (errorData.message) {
             const message = errorData.message.toLowerCase();
-            
+
             // Map specific business logic errors to fields
             if (message.includes('username already exists') || message.includes('tên đăng nhập đã tồn tại')) {
                 result.fields['username'] = 'Tên đăng nhập đã được sử dụng';
@@ -161,13 +161,13 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                 result.general = 'Tên đăng nhập hoặc mật khẩu không chính xác';
             }
             else if (message.includes('login failed')) {
-                 if (!result.general) result.general = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+                if (!result.general) result.general = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
             }
             else if (message.includes('registration failed')) {
-                 if (!result.general) result.general = 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.';
+                if (!result.general) result.general = 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.';
             }
             else if (message.includes('an error occurred')) {
-                 if (!result.general) result.general = 'Đã xảy ra lỗi. Vui lòng thử lại sau.';
+                if (!result.general) result.general = 'Đã xảy ra lỗi. Vui lòng thử lại sau.';
             }
             else {
                 // Unknown message, set as general
@@ -176,7 +176,7 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                 }
             }
         }
-        
+
         // Handle Details field (from 500 errors)
         if (errorData.details) {
             const details = errorData.details.toLowerCase();
@@ -217,7 +217,7 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                 form.append('Username', formData.username.trim());
                 form.append('Password', formData.password);
 
-                const response = await fetch('http://localhost:5191/api/Auth/Login', {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Auth/Login`, {
                     method: 'POST',
                     body: form
                 });
@@ -237,7 +237,7 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                     localStorage.setItem('username', formData.username);
                     localStorage.setItem('fullname', data.fullName);
                     localStorage.setItem('role', data.role);
-                    
+
                     if (data.role === 'Admin') {
                         window.location.href = '/admin';
                     } else {
@@ -246,17 +246,17 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                 } else {
                     // Connected to server but received error response
                     const parsed = parseBackendErrors(data);
-                    
+
                     // Priority handling for Login errors:
                     // If backend returns 401 (Unauthorized) OR general failure without specific field errors
                     if (response.status === 401 || (!parsed.general && Object.keys(parsed.fields).length === 0)) {
-                         parsed.general = 'Tên đăng nhập hoặc mật khẩu không hợp lệ';
+                        parsed.general = 'Tên đăng nhập hoặc mật khẩu không hợp lệ';
                     } else if (response.status === 500) {
                         // For 500 errors, if it looks like an auth error, say so. Otherwise generic server error.
                         if (parsed.general && (parsed.general.includes('không chính xác') || parsed.general.includes('thất bại'))) {
                             parsed.general = 'Tên đăng nhập hoặc mật khẩu không hợp lệ';
                         } else if (!parsed.general) {
-                             parsed.general = 'Đã xảy ra lỗi từ phía máy chủ.';
+                            parsed.general = 'Đã xảy ra lỗi từ phía máy chủ.';
                         }
                     }
 
@@ -273,7 +273,7 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                 form.append('PhoneNumber', '0000000000');
                 form.append('RoleId', '1');
 
-                const response = await fetch('http://localhost:5191/api/Auth/Register', {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Auth/Register`, {
                     method: 'POST',
                     body: form
                 });
@@ -325,10 +325,10 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
 
                     <div className="auth-field">
                         <label>Tên đăng nhập</label>
-                        <input 
-                            name="username" 
-                            type="text" 
-                            placeholder="Tên đăng nhập" 
+                        <input
+                            name="username"
+                            type="text"
+                            placeholder="Tên đăng nhập"
                             value={formData.username}
                             onChange={handleInputChange}
                             className={fieldErrors.username ? 'error' : ''}
@@ -340,10 +340,10 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                         <>
                             <div className="auth-field">
                                 <label>Họ và tên</label>
-                                <input 
-                                    name="fullName" 
-                                    type="text" 
-                                    placeholder="Nguyễn Văn A" 
+                                <input
+                                    name="fullName"
+                                    type="text"
+                                    placeholder="Nguyễn Văn A"
                                     value={formData.fullName}
                                     onChange={handleInputChange}
                                     className={fieldErrors.fullName ? 'error' : ''}
@@ -352,10 +352,10 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
                             </div>
                             <div className="auth-field">
                                 <label>Email</label>
-                                <input 
-                                    name="email" 
-                                    type="email" 
-                                    placeholder="example@gmail.com" 
+                                <input
+                                    name="email"
+                                    type="email"
+                                    placeholder="example@gmail.com"
                                     value={formData.email}
                                     onChange={handleInputChange}
                                     className={fieldErrors.email ? 'error' : ''}
@@ -367,10 +367,10 @@ const AuthModal = ({ isOpen, onClose, initialView = 'login' }: { isOpen: boolean
 
                     <div className="auth-field">
                         <label>Mật khẩu</label>
-                        <input 
-                            name="password" 
-                            type="password" 
-                            placeholder="••••••••" 
+                        <input
+                            name="password"
+                            type="password"
+                            placeholder="••••••••"
                             value={formData.password}
                             onChange={handleInputChange}
                             className={fieldErrors.password ? 'error' : ''}

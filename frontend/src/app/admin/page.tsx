@@ -32,6 +32,20 @@ const AdminPage = () => {
     const [autoRefreshing, setAutoRefreshing] = useState(false);
     const [nextRefresh, setNextRefresh] = useState(10);
     const [fullname, setFullname] = useState('Admin');
+    const [provinces, setProvinces] = useState<any[]>([]);
+
+    // Scenic Spot Modal State
+    const [isSpotModalOpen, setIsSpotModalOpen] = useState(false);
+    const [editingSpot, setEditingSpot] = useState<any>(null);
+    const [spotForm, setSpotForm] = useState({
+        scenicSpotName: '',
+        description: '',
+        provinceId: 0,
+        estimatedVisitPrice: 0,
+        imageUrl: '',
+        isViewed: true,
+        mediaUrls: '' // Comma separated for simplicity in UI
+    });
 
     useEffect(() => {
         // Check role và get fullname từ localStorage (chỉ chạy ở client)
@@ -43,7 +57,15 @@ const AdminPage = () => {
             setFullname(localStorage.getItem('fullname') || 'Admin');
         }
         fetchStats();
+        fetchProvinces();
     }, []);
+
+    const fetchProvinces = async () => {
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Province/GetAllProvinces`);
+            if (res.ok) setProvinces(await res.json());
+        } catch (e) { console.error('Fetch provinces failed'); }
+    };
 
     useEffect(() => {
         if (activeTab !== 'dashboard') {
@@ -77,7 +99,7 @@ const AdminPage = () => {
     const fetchStats = async () => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5191/api/Admin/DashboardStats', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Admin/DashboardStats`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -102,7 +124,7 @@ const AdminPage = () => {
                 case 'payments': endpoint = 'Orders'; break;
             }
 
-            const res = await fetch(`http://localhost:5191/api/Admin/${endpoint}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Admin/${endpoint}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -119,27 +141,96 @@ const AdminPage = () => {
     const confirmOrder = async (id: number) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:5191/api/Admin/Orders/${id}/Confirm`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Admin/Orders/${id}/Confirm`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
                 alert('Đã xác nhận thanh toán!');
-                fetchData();
+                fetchData(true);
+                fetchStats(); // Update revenue
             }
         } catch (e) {
             alert('Lỗi khi xác nhận');
         }
     };
 
+    const handleAddSpot = () => {
+        setEditingSpot(null);
+        setSpotForm({
+            scenicSpotName: '',
+            description: '',
+            provinceId: provinces[0]?.provinceId || 0,
+            estimatedVisitPrice: 0,
+            imageUrl: '',
+            isViewed: true,
+            mediaUrls: ''
+        });
+        setIsSpotModalOpen(true);
+    };
+
+    const handleEditSpot = (spot: any) => {
+        setEditingSpot(spot);
+        setSpotForm({
+            scenicSpotName: spot.scenicSpotName,
+            description: spot.description,
+            provinceId: spot.provinceId,
+            estimatedVisitPrice: spot.estimatedVisitPrice,
+            imageUrl: spot.imageUrl || '',
+            isViewed: spot.isViewed,
+            mediaUrls: spot.medias?.map((m: any) => m.mediaUrl).join(', ') || ''
+        });
+        setIsSpotModalOpen(true);
+    };
+
+    const handleSaveSpot = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const url = editingSpot
+                ? `${process.env.NEXT_PUBLIC_API_URL}/api/Admin/ScenicSpots/${editingSpot.scenicSpotId}`
+                : `${process.env.NEXT_PUBLIC_API_URL}/api/Admin/ScenicSpots`;
+
+            const method = editingSpot ? 'PUT' : 'POST';
+
+            // Map comma separated URLs back to Medias array if backend expects it
+            // For now, let's just send the basic fields and see
+            const body = {
+                ...spotForm,
+                scenicSpotId: editingSpot?.scenicSpotId || 0,
+                // Converting back to Medias collection if needed
+                medias: spotForm.mediaUrls.split(',').filter(u => u.trim()).map(u => ({ mediaUrl: u.trim() }))
+            };
+
+            const res = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (res.ok) {
+                alert(editingSpot ? 'Đã cập nhật!' : 'Đã thêm mới!');
+                setIsSpotModalOpen(false);
+                fetchData();
+            } else {
+                const err = await res.json();
+                alert('Lỗi: ' + (err.message || 'Không thể lưu'));
+            }
+        } catch (e) {
+            alert('Lỗi khi lưu địa điểm');
+        }
+    };
+
     const updateOrderStatus = async (orderId: number, newStatus: string) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:5191/api/AdminOrder/UpdateOrderStatus/${orderId}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AdminOrder/UpdateOrderStatus/${orderId}`, {
                 method: 'PATCH',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` 
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(newStatus)
             });
@@ -163,8 +254,9 @@ const AdminPage = () => {
             switch (activeTab) {
                 case 'users': endpoint = 'Users'; break;
                 case 'spots': endpoint = 'ScenicSpots'; break;
+                case 'hotels': endpoint = 'Hotels'; break;
             }
-            const res = await fetch(`http://localhost:5191/api/Admin/${endpoint}/${id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Admin/${endpoint}/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -179,9 +271,8 @@ const AdminPage = () => {
     const sidebarItems = [
         { id: 'dashboard', label: 'Dashboard', icon: <DashboardOutlined /> },
         { id: 'users', label: 'Người dùng', icon: <UserOutlined /> },
-        // { id: 'spots', label: 'Địa điểm', icon: <EnvironmentOutlined /> },
-        // { id: 'hotels', label: 'Khách sạn', icon: <HomeOutlined /> },
-        // { id: 'cars', label: 'Cho thuê xe', icon: <CarOutlined /> },
+        { id: 'spots', label: 'Địa điểm', icon: <EnvironmentOutlined /> },
+        { id: 'hotels', label: 'Khách sạn', icon: <HomeOutlined /> },
         { id: 'payments', label: 'Đơn hàng', icon: <CreditCardOutlined /> },
     ];
 
@@ -198,9 +289,9 @@ const AdminPage = () => {
                     </div>
                     <div className="user-section">
                         <span>{fullname}</span>
-                        <button className="btn-logout" onClick={() => { 
+                        <button className="btn-logout" onClick={() => {
                             if (typeof window !== 'undefined') {
-                                localStorage.clear(); 
+                                localStorage.clear();
                                 window.location.href = '/';
                             }
                         }}>
@@ -242,8 +333,8 @@ const AdminPage = () => {
                                     )}
                                 </div>
                             )}
-                            {activeTab !== 'dashboard' && activeTab !== 'payments' && (
-                                <button className="btn primary btn-add">
+                            {activeTab !== 'dashboard' && activeTab !== 'payments' && activeTab !== 'users' && (
+                                <button className="btn primary btn-add" onClick={activeTab === 'spots' ? handleAddSpot : () => { }}>
                                     <PlusOutlined /> Thêm mới
                                 </button>
                             )}
@@ -257,10 +348,95 @@ const AdminPage = () => {
                             <>
                                 {activeTab === 'dashboard' && <DashboardView stats={stats} />}
                                 {activeTab === 'users' && <UserManagement data={data} onDelete={deleteItem} />}
+                                {activeTab === 'spots' && <ScenicSpotManagement data={data} onEdit={handleEditSpot} onDelete={deleteItem} />}
+                                {activeTab === 'hotels' && <HotelManagement data={data} />}
                                 {activeTab === 'payments' && <PaymentManagement data={data} onConfirm={confirmOrder} onUpdateStatus={updateOrderStatus} />}
                             </>
                         )}
                     </div>
+
+                    {isSpotModalOpen && (
+                        <div className="modal-overlay-admin">
+                            <div className="modal-admin">
+                                <div className="modal-header-admin">
+                                    <h3>{editingSpot ? 'Chỉnh sửa địa điểm' : 'Thêm địa điểm mới'}</h3>
+                                    <button className="close-btn" onClick={() => setIsSpotModalOpen(false)}>×</button>
+                                </div>
+                                <div className="modal-body-admin">
+                                    <div className="form-group-admin">
+                                        <label>Tên địa điểm</label>
+                                        <input
+                                            value={spotForm.scenicSpotName}
+                                            onChange={e => setSpotForm({ ...spotForm, scenicSpotName: e.target.value })}
+                                            placeholder="VD: Vịnh Hạ Long"
+                                        />
+                                    </div>
+                                    <div className="form-group-admin">
+                                        <label>Tỉnh thành</label>
+                                        <select
+                                            value={spotForm.provinceId}
+                                            onChange={e => setSpotForm({ ...spotForm, provinceId: parseInt(e.target.value) })}
+                                        >
+                                            {provinces.map(p => (
+                                                <option key={p.provinceId} value={p.provinceId}>{p.provinceName}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="form-group-row">
+                                        <div className="form-group-admin">
+                                            <label>Giá vé (VND)</label>
+                                            <input
+                                                type="number"
+                                                value={spotForm.estimatedVisitPrice}
+                                                onChange={e => setSpotForm({ ...spotForm, estimatedVisitPrice: parseFloat(e.target.value) })}
+                                            />
+                                        </div>
+                                        <div className="form-group-admin">
+                                            <label>Trạng thái</label>
+                                            <select
+                                                value={spotForm.isViewed ? 'true' : 'false'}
+                                                onChange={e => setSpotForm({ ...spotForm, isViewed: e.target.value === 'true' })}
+                                            >
+                                                <option value="true">Hiển thị</option>
+                                                <option value="false">Ẩn</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="form-group-admin">
+                                        <label>Ảnh đại diện (URL)</label>
+                                        <input
+                                            value={spotForm.imageUrl}
+                                            onChange={e => setSpotForm({ ...spotForm, imageUrl: e.target.value })}
+                                            placeholder="https://example.com/image.jpg"
+                                        />
+                                        {spotForm.imageUrl && <img src={spotForm.imageUrl} className="preview-img" alt="" />}
+                                    </div>
+                                    <div className="form-group-admin">
+                                        <label>Danh sách Media (Cách nhau bởi dấu phẩy)</label>
+                                        <textarea
+                                            rows={3}
+                                            value={spotForm.mediaUrls}
+                                            onChange={e => setSpotForm({ ...spotForm, mediaUrls: e.target.value })}
+                                            placeholder="URL ảnh 1, URL ảnh 2, URL video..."
+                                        />
+                                        <p className="hint">Dùng để hiển thị các ảnh/video khác cho khách du lịch</p>
+                                    </div>
+                                    <div className="form-group-admin">
+                                        <label>Mô tả chi tiết</label>
+                                        <textarea
+                                            rows={5}
+                                            value={spotForm.description}
+                                            onChange={e => setSpotForm({ ...spotForm, description: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="modal-footer-admin">
+                                    <button className="btn outline" onClick={() => setIsSpotModalOpen(false)}>Hủy</button>
+                                    <button className="btn primary" onClick={handleSaveSpot}>Lưu lại</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </section>
             </main>
 
@@ -321,6 +497,26 @@ const AdminPage = () => {
                 .stat-icon { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font-size: 24px; }
                 .stat-info h4 { font-size: 14px; color: #64748b; margin-bottom: 4px; }
                 .stat-info strong { font-size: 24px; color: #0f172a; }
+
+                /* Admin Modals */
+                .modal-overlay-admin { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 2000; display: grid; place-items: center; padding: 40px; }
+                .modal-admin { background: white; width: 100%; max-width: 600px; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: zoomIn 0.3s ease; display: flex; flex-direction: column; max-height: 90vh; }
+                .modal-header-admin { padding: 20px 24px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+                .modal-header-admin h3 { margin: 0; font-size: 18px; font-weight: 800; color: #0f172a; }
+                .close-btn { background: none; border: none; font-size: 24px; color: #94a3b8; cursor: pointer; }
+                
+                .modal-body-admin { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+                .form-group-admin { display: flex; flex-direction: column; gap: 8px; }
+                .form-group-admin label { font-size: 13px; font-weight: 700; color: #475569; }
+                .form-group-admin input, .form-group-admin select, .form-group-admin textarea { padding: 10px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; font-size: 14px; outline: none; transition: 0.2s; }
+                .form-group-admin input:focus { border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
+                .form-group-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+                .preview-img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-top: 8px; border: 1px solid #e2e8f0; }
+                .hint { font-size: 11px; color: #94a3b8; margin: 0; }
+
+                .modal-footer-admin { padding: 20px 24px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 12px; background: #f8fafc; }
+                
+                @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
             `}</style>
         </div>
     );
@@ -328,7 +524,7 @@ const AdminPage = () => {
 
 const DashboardView = ({ stats }: any) => {
     const money = (x: number) => new Intl.NumberFormat("vi-VN").format(x);
-    
+
     return (
         <div>
             <div className="welcome-banner">
@@ -347,7 +543,7 @@ const DashboardView = ({ stats }: any) => {
                         <div className="stat-lbl">Người dùng</div>
                     </div>
                 </div>
-                
+
                 <div className="stat-card-dash stat-green">
                     <div className="stat-icon-dash"><EnvironmentOutlined /></div>
                     <div className="stat-info-dash">
@@ -355,7 +551,7 @@ const DashboardView = ({ stats }: any) => {
                         <div className="stat-lbl">Địa điểm</div>
                     </div>
                 </div>
-                
+
                 <div className="stat-card-dash stat-orange">
                     <div className="stat-icon-dash"><HomeOutlined /></div>
                     <div className="stat-info-dash">
@@ -363,7 +559,7 @@ const DashboardView = ({ stats }: any) => {
                         <div className="stat-lbl">Khách sạn</div>
                     </div>
                 </div>
-                
+
                 <div className="stat-card-dash stat-cyan">
                     <div className="stat-icon-dash"><CreditCardOutlined /></div>
                     <div className="stat-info-dash">
@@ -460,9 +656,9 @@ const UserManagement = ({ data, onDelete }: any) => (
                         <td>
                             <div className="action-buttons">
                                 <button className="action-btn edit-btn" title="Sửa"><EditOutlined /></button>
-                                <button 
-                                    className="action-btn delete-btn" 
-                                    onClick={() => onDelete(u.userId)} 
+                                <button
+                                    className="action-btn delete-btn"
+                                    onClick={() => onDelete(u.userId)}
                                     disabled={u.roleId === 2}
                                     title="Xóa"
                                     style={{ opacity: u.roleId === 2 ? 0.3 : 1, cursor: u.roleId === 2 ? 'not-allowed' : 'pointer' }}
@@ -504,7 +700,7 @@ const UserManagement = ({ data, onDelete }: any) => (
     </div>
 );
 
-const ScenicSpotManagement = ({ data, onDelete }: any) => (
+const ScenicSpotManagement = ({ data, onEdit, onDelete }: any) => (
     <div className="admin-table-container">
         <table>
             <thead>
@@ -523,11 +719,11 @@ const ScenicSpotManagement = ({ data, onDelete }: any) => (
                         <td><img src={s.imageUrl} style={{ width: 80, height: 50, objectFit: 'cover', borderRadius: 8 }} alt="" /></td>
                         <td><strong>{s.scenicSpotName}</strong></td>
                         <td>{s.province?.provinceName}</td>
-                        <td>{s.estimatedVisitPrice === 0 ? 'Miễn phí' : `${s.estimatedVisitPrice.toLocaleString()} VND`}</td>
-                        <td><span className={`badge ${s.isViewed ? 'success' : 'warning'}`}>{s.isViewed ? 'Đã duyệt' : 'Chưa duyệt'}</span></td>
+                        <td>{s.estimatedVisitPrice === 0 ? 'Miễn phí' : `${s.estimatedVisitPrice} VND`}</td>
+                        <td><span className={`badge ${s.isViewed ? 'success' : 'warning'}`}>{s.isViewed ? 'Hiển thị' : 'Ẩn'}</span></td>
                         <td>
-                            <div className="actions">
-                                <button className="btn-icon"><EditOutlined /></button>
+                            <div className="action-buttons-cell">
+                                <button className="btn-icon edit" onClick={() => onEdit(s)}><EditOutlined /></button>
                                 <button className="btn-icon delete" onClick={() => onDelete(s.scenicSpotId)}><DeleteOutlined /></button>
                             </div>
                         </td>
@@ -535,6 +731,12 @@ const ScenicSpotManagement = ({ data, onDelete }: any) => (
                 ))}
             </tbody>
         </table>
+        <style jsx>{`
+            .action-buttons-cell { display: flex; gap: 8px; }
+            .btn-icon { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; cursor: pointer; display: grid; place-items: center; color: #64748b; transition: 0.2s; }
+            .btn-icon:hover { border-color: #6366f1; color: #6366f1; }
+            .btn-icon.delete:hover { border-color: #ef4444; color: #ef4444; }
+        `}</style>
     </div>
 );
 
@@ -557,7 +759,7 @@ const HotelManagement = ({ data }: any) => (
                         <td><img src={h.imageUrl} style={{ width: 80, height: 50, objectFit: 'cover', borderRadius: 8 }} alt="" /></td>
                         <td><strong>{h.name}</strong></td>
                         <td>{h.location}</td>
-                        <td>{h.pricePerNight.toLocaleString()} VND</td>
+                        <td>{h.pricePerNight} VND</td>
                         <td>⭐ {h.rating}</td>
                         <td>
                             <div className="actions">
@@ -606,7 +808,7 @@ const CarManagement = ({ data }: any) => (
 
 const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
     const money = (x: number) => new Intl.NumberFormat("vi-VN").format(x);
-    
+
     // Filter out null/undefined items
     const validData = (data || []).filter((o: any) => o && o.orderId);
 
@@ -643,7 +845,7 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                         {validData.map((o: any) => {
                             const isPayed = o.status === 'Payed';
                             const orderId = o.orderId || o.OrderId || 0;
-                            
+
                             return (
                                 <tr key={orderId} className={isPayed ? 'row-payed' : ''}>
                                     <td>
@@ -660,7 +862,7 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                                     </td>
                                     <td><span className="price-cell">{money(o.totalPrice || 0)} đ</span></td>
                                     <td>
-                                        <select 
+                                        <select
                                             className={`status-dropdown status-${(o.status || 'pending').toLowerCase()}`}
                                             value={o.status || 'Pending'}
                                             disabled={isPayed}
@@ -674,9 +876,16 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                                     </td>
                                     <td><span className="date-text">{o.orderDate ? new Date(o.orderDate).toLocaleDateString('vi-VN') : 'N/A'}</span></td>
                                     <td>
-                                        <button className="btn-view" title="Xem chi tiết">
-                                            <EyeOutlined /> Chi tiết
-                                        </button>
+                                        <div className="action-cell">
+                                            {o.status === 'WaitPayment' && (
+                                                <button className="btn-confirm" onClick={() => onConfirm(orderId)}>
+                                                    <CheckCircleOutlined /> Duyệt
+                                                </button>
+                                            )}
+                                            <button className="btn-view-only" title="Xem chi tiết">
+                                                <EyeOutlined />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             );
@@ -684,7 +893,7 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                     </tbody>
                 </table>
             </div>
-            
+
             <style jsx>{`
                 .orders-container { display: flex; flex-direction: column; gap: 24px; }
                 .orders-stats-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -717,8 +926,11 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                 .status-payed { background: #ecfdf5; color: #10b981; border-color: #86efac; }
                 .status-cancelled { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
                 
-                .btn-view { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: #f0f9ff; border: 1px solid #bae6fd; color: #0284c7; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-                .btn-view:hover { background: #1ea1f2; color: white; border-color: #1ea1f2; }
+                .action-cell { display: flex; gap: 8px; align-items: center; }
+                .btn-confirm { background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: 0.2s; white-space: nowrap; }
+                .btn-confirm:hover { background: #059669; transform: translateY(-1px); }
+                .btn-view-only { width: 32px; height: 32px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #64748b; border-radius: 8px; display: grid; place-items: center; cursor: pointer; border: none; }
+                .btn-view-only:hover { background: #e2e8f0; color: #0f172a; }
             `}</style>
         </div>
     );

@@ -53,32 +53,32 @@ const SocialFloatButtons = () => {
   return (
     <div className="social-float-container">
       {/* Facebook Icon */}
-      <a 
-        href="https://www.facebook.com/profile.php?id=61587150455623" 
-        target="_blank" 
+      <a
+        href="https://www.facebook.com/profile.php?id=61587150455623"
+        target="_blank"
         rel="noopener noreferrer"
         className="social-float-btn facebook-btn"
         title="Facebook Page"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
         </svg>
       </a>
 
       {/* Messenger Icon with Tooltip */}
-      <div 
+      <div
         className="messenger-wrapper"
         onMouseEnter={() => setShowMessengerTooltip(true)}
         onMouseLeave={() => setShowMessengerTooltip(false)}
       >
-        <a 
-          href="https://m.me/961137500418471" 
-          target="_blank" 
+        <a
+          href="https://m.me/961137500418471"
+          target="_blank"
           rel="noopener noreferrer"
           className="social-float-btn messenger-btn"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.974 12-11.111C24 4.975 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8l3.131 3.259L19.752 8l-6.561 6.963z"/>
+            <path d="M12 0C5.373 0 0 4.975 0 11.111c0 3.497 1.745 6.616 4.472 8.652V24l4.086-2.242c1.09.301 2.246.464 3.442.464 6.627 0 12-4.974 12-11.111C24 4.975 18.627 0 12 0zm1.191 14.963l-3.055-3.26-5.963 3.26L10.732 8l3.131 3.259L19.752 8l-6.561 6.963z" />
           </svg>
         </a>
         {showMessengerTooltip && (
@@ -194,7 +194,7 @@ const ChatWidget = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5191/api/AIChat/Chat', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/Chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -420,7 +420,7 @@ const SearchSection = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.hint?.trim()) return alert("Vui lòng chọn điểm đến!");
-    
+
     const budgetNum = parseInt(form.budget);
     if (!budgetNum || budgetNum < 500000) {
       return alert("Vui lòng nhập ngân sách tối thiểu 500,000 VND!");
@@ -465,7 +465,7 @@ const SearchSection = ({
             <CustomSelect
               label="Bạn muốn đi đâu?"
               value={form.hint}
-              options={provinces.length > 0 
+              options={provinces.length > 0
                 ? provinces.map(p => ({ label: p.provinceName, value: p.provinceName }))
                 : [{ label: 'Đang tải...', value: '' }]
               }
@@ -481,10 +481,10 @@ const SearchSection = ({
 
             <div className="field">
               <span className="label-text">Ngân sách (VND)</span>
-              <input 
-                className="input" 
-                type="number" 
-                min="500000" 
+              <input
+                className="input"
+                type="number"
+                min="500000"
                 step="100000"
                 placeholder="5,000,000"
                 value={form.budget}
@@ -637,7 +637,7 @@ const TourDetailModal = ({ tour, isOpen, onClose, onRequireAuth }: { tour: any, 
         body.itemName = `Khách sạn ${item.name}`;
       }
 
-      const response = await fetch('http://localhost:5191/api/Order/AddToCart', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/AddToCart`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -922,10 +922,10 @@ export default function Home() {
   const [aiResult, setAiResult] = useState<any>(null);
   const [scheduleProvinceId, setScheduleProvinceId] = useState<number | null>(null);
   const [provinces, setProvinces] = useState<Province[]>([]);
-  const [paymentModal, setPaymentModal] = useState<{ show: boolean; message: string; amount: number; qrUrl?: string; orderId?: number }>({ 
-    show: false, 
-    message: '', 
-    amount: 0 
+  const [paymentModal, setPaymentModal] = useState<{ show: boolean; message: string; amount: number; qrUrl?: string; orderId?: number }>({
+    show: false,
+    message: '',
+    amount: 0
   });
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
 
@@ -948,7 +948,7 @@ export default function Home() {
   useEffect(() => {
     const fetchTours = async () => {
       try {
-        const response = await fetch('http://localhost:5191/api/ScenicSpot/GetAllScenicSpots');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ScenicSpot/GetAllScenicSpots`);
         if (response.ok) {
           const data = await response.json();
           const mappedTours = data.map((spot: any) => ({
@@ -958,7 +958,7 @@ export default function Home() {
             img: spot.imageUrl
               ? spot.imageUrl
               : (spot.mediaUrls && spot.mediaUrls.length > 0
-                ? `http://localhost:5191${spot.mediaUrls[0]}`
+                ? `${process.env.NEXT_PUBLIC_API_URL}${spot.mediaUrls[0]}`
                 : 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=800&q=80'),
             link: "#"
           }));
@@ -976,7 +976,7 @@ export default function Home() {
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
-        const res = await fetch("http://localhost:5191/api/Province/GetAllProvinces");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Province/GetAllProvinces`);
         if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data)) setProvinces(data);
@@ -994,7 +994,7 @@ export default function Home() {
     // Find provinceId from selected province name
     const province = provinces.find(p => p.provinceName === data.hint);
     const provinceId = province?.provinceId || 0;
-    
+
     if (!provinceId) {
       return alert("Vui lòng chọn điểm đến từ danh sách!");
     }
@@ -1004,7 +1004,7 @@ export default function Home() {
     setAiResult(null);
 
     try {
-      const res = await fetch('http://localhost:5191/api/AIChat/GenerateSchedule', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/GenerateSchedule`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1043,7 +1043,7 @@ export default function Home() {
         setTotalCost(result.estimatedTotalCost);
         setCurrentDay(1);
         setCurrentVideoIndex(0); // Reset video carousel
-        
+
         // Scroll to video section first
         setTimeout(() => {
           document.getElementById('video-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1077,7 +1077,7 @@ export default function Home() {
 
     try {
       // Create payment order
-      const res = await fetch('http://localhost:5191/api/AIChat/CreateAIPaymentOrder', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/CreateAIPaymentOrder`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1091,7 +1091,7 @@ export default function Home() {
         const amount = data.Amount || 50000;
 
         // Get payment info
-        const payInfoRes = await fetch('http://localhost:5191/api/Order/GetPaymentInfo');
+        const payInfoRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/GetPaymentInfo`);
         const payInfo = await payInfoRes.json();
 
         // Generate VietQR
@@ -1145,31 +1145,31 @@ export default function Home() {
                     key={currentVideoIndex}
                     src={currentVideos[currentVideoIndex]}
                   />
-                  
+
                   <div className="video-overlay-compact">
                     <h4>{provinceName}</h4>
                     <span>{currentVideoIndex + 1}/{currentVideos.length}</span>
                   </div>
-                  
+
                   {currentVideos.length > 1 && (
                     <>
-                      <button 
+                      <button
                         className="video-nav-compact prev"
                         onClick={() => setCurrentVideoIndex(prev => (prev - 1 + currentVideos.length) % currentVideos.length)}
                       >
                         ❮
                       </button>
-                      
-                      <button 
+
+                      <button
                         className="video-nav-compact next"
                         onClick={() => setCurrentVideoIndex(prev => (prev + 1) % currentVideos.length)}
                       >
                         ❯
                       </button>
-                      
+
                       <div className="video-dots-compact">
                         {currentVideos.map((_, idx) => (
-                          <div 
+                          <div
                             key={idx}
                             className={`dot-compact ${idx === currentVideoIndex ? 'active' : ''}`}
                             onClick={() => setCurrentVideoIndex(idx)}
@@ -1201,7 +1201,7 @@ export default function Home() {
         <div className="payment-modal-overlay" onClick={() => setPaymentModal({ show: false, message: '', amount: 0 })}>
           <div className="payment-modal-box" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close-btn" onClick={() => setPaymentModal({ show: false, message: '', amount: 0 })}>✕</button>
-            
+
             {!paymentModal.qrUrl ? (
               <div className="payment-content">
                 <div className="pay-icon">💳</div>

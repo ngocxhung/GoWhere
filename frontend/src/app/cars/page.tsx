@@ -12,7 +12,7 @@ export default function CarsPage() {
 
     const fetchCars = async () => {
         try {
-            const res = await fetch('http://localhost:5191/api/Discovery/Cars');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Discovery/Cars`);
             if (res.ok) {
                 setCarsData(await res.json());
             }
@@ -40,7 +40,7 @@ export default function CarsPage() {
                 serviceId: car.carRentalId
             };
 
-            const res = await fetch('http://localhost:5191/api/Order/AddToCart', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/AddToCart`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

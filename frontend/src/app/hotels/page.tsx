@@ -12,7 +12,7 @@ export default function HotelsPage() {
 
     const fetchHotels = async () => {
         try {
-            const res = await fetch('http://localhost:5191/api/Discovery/Hotels');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Discovery/Hotels`);
             if (res.ok) {
                 setHotelsData(await res.json());
             }
@@ -40,7 +40,7 @@ export default function HotelsPage() {
                 serviceId: hotel.hotelId
             };
 
-            const res = await fetch('http://localhost:5191/api/Order/AddToCart', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/AddToCart`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

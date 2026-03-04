@@ -33,7 +33,7 @@ export default function ItineraryPage() {
         }
 
         try {
-            const res = await fetch('http://localhost:5191/api/Order/GetMyOrders', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/GetMyOrders`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -56,9 +56,9 @@ export default function ItineraryPage() {
             const locQuery = locations.join(',');
             const idQuery = provinceIds.join(',');
             const [hRes, cRes, fRes] = await Promise.all([
-                fetch(`http://localhost:5191/api/Discovery/Hotels?location=${encodeURIComponent(locQuery)}&provinceIds=${idQuery}`),
-                fetch('http://localhost:5191/api/Discovery/Cars'),
-                fetch('http://localhost:5191/api/Discovery/Flights')
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Discovery/Hotels?location=${encodeURIComponent(locQuery)}&provinceIds=${idQuery}`),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Discovery/Cars`),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Discovery/Flights`)
             ]);
             if (hRes.ok) setDiscoveryHotels(await hRes.json());
             if (cRes.ok) setDiscoveryCars(await cRes.json());
@@ -114,7 +114,7 @@ export default function ItineraryPage() {
                 parentItemId: item.parentItemId || null
             };
 
-            const res = await fetch('http://localhost:5191/api/Order/AddToCart', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/AddToCart`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ export default function ItineraryPage() {
 
         const token = localStorage.getItem('token');
         try {
-            const res = await fetch(`http://localhost:5191/api/Order/RemoveFromCart/${id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/RemoveFromCart/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -177,14 +177,14 @@ export default function ItineraryPage() {
         const token = localStorage.getItem('token');
         try {
             // 1. First get Payment Info (Bank details from appsettings)
-            const payInfoRes = await fetch('http://localhost:5191/api/Order/GetPaymentInfo', {
+            const payInfoRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/GetPaymentInfo`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const payInfo = await payInfoRes.json();
             setPaymentDetails(payInfo);
 
             // 2. Perform Checkout
-            const res = await fetch('http://localhost:5191/api/Order/Checkout', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/Checkout`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
