@@ -406,13 +406,13 @@ export default function AIPage() {
 
                             <button
                                 className="generate-btn"
-                                onClick={generateSchedule}
+                                onClick={handleAIPayment}
                                 disabled={scheduleLoading}
                             >
                                 {scheduleLoading ? (
-                                    <><LoadingOutlined /> AI ĐANG TẠO LỊCH TRÌNH...</>
+                                    <><LoadingOutlined /> ĐANG TẠO ĐƠN THANH TOÁN...</>
                                 ) : (
-                                    <><CalendarOutlined /> TẠO LỊCH TRÌNH NGAY</>
+                                    <><CalendarOutlined /> TẠO ĐƠN THANH TOÁN AI</>
                                 )}
                             </button>
                         </div>
