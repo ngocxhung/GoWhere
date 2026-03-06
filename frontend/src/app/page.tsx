@@ -185,15 +185,6 @@ const ChatWidget = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Simple markdown formatter
-  const formatMessage = (text: string) => {
-    // Convert **bold** to <strong>
-    let formatted = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    // Convert numbered lists to proper format
-    formatted = formatted.replace(/^\*\*(\d+)\.\s*(.+?):\*\*/gm, '<strong>$1. $2:</strong>');
-    return formatted;
-  };
-
   const send = async () => {
     if (!input.trim() || loading) return;
 
@@ -245,11 +236,7 @@ const ChatWidget = () => {
           </div>
           <div className="chat-content">
             {messages.map((m, i) => (
-              <div 
-                key={i} 
-                className={`msg ${m.type}`}
-                dangerouslySetInnerHTML={{ __html: m.type === 'bot' ? formatMessage(m.text) : m.text }}
-              />
+              <div key={i} className={`msg ${m.type}`}>{m.text}</div>
             ))}
             {loading && (
               <div className="msg bot typing">
@@ -278,10 +265,9 @@ const ChatWidget = () => {
         .chat-box { position: fixed; left: 24px; bottom: 100px; width: 380px; height: 550px; background: white; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.2); border: 1px solid var(--line); z-index: 1000; }
         .chat-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 18px; font-weight: 700; text-align: center; display: flex; align-items: center; justify-content: center; font-size: 16px; }
         .chat-content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; background: linear-gradient(to bottom, #f8f9ff 0%, #ffffff 100%); }
-        .msg { padding: 12px 16px; border-radius: 16px; max-width: 85%; font-size: 14px; line-height: 1.5; animation: slideIn 0.3s ease-out; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap; }
+        .msg { padding: 12px 16px; border-radius: 16px; max-width: 85%; font-size: 14px; line-height: 1.5; animation: slideIn 0.3s ease-out; }
         .msg.bot { background: white; color: var(--ink); align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; }
-        .msg.bot strong { color: #1e40af; font-weight: 700; }
-        .msg.user { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); white-space: normal; }
+        .msg.user { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); }
         .msg.typing { display: flex; gap: 6px; padding: 16px; }
         .msg.typing span { width: 8px; height: 8px; background: #cbd5e1; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; }
         .msg.typing span:nth-child(1) { animation-delay: -0.32s; }
@@ -1013,13 +999,69 @@ export default function Home() {
       return alert("Vui lòng chọn điểm đến từ danh sách!");
     }
 
-    // Tạm thời: thay vì tạo lịch trình AI, chuyển sang tạo đơn thanh toán AI để test QR
     setGenerating(true);
     setItinerary(null);
     setAiResult(null);
 
     try {
-      await handleAIPayment();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/GenerateSchedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          provinceId,
+          userLocation: data.userLocation,
+          destination: data.hint,
+          pax: data.pax,
+          budget: parseInt(data.budget) || 5000000,
+          numberOfDays: parseInt(data.days),
+          travelStyle: data.style,
+          companionType: data.group
+        })
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        setAiResult(result);
+        setScheduleProvinceId(result.provinceId || null);
+
+        // Transform AI result to UI format
+        const newItinerary: Record<number, Activity[]> = {};
+        result.dailyItinerary.forEach((day: any) => {
+          newItinerary[day.day] = day.activities.map((act: any) => ({
+            t: act.time,
+            name: act.scenicSpot?.name || act.activity,
+            price: act.estimatedCost,
+            id: act.scenicSpot?.scenicSpotId || 0,
+            description: act.description
+          }));
+        });
+
+        setItinerary(newItinerary);
+        setTotalCost(result.estimatedTotalCost);
+        setCurrentDay(1);
+        setCurrentVideoIndex(0); // Reset video carousel
+
+        // Scroll to video section first
+        setTimeout(() => {
+          document.getElementById('video-preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      } else if (res.status === 402) {
+        // Payment required
+        const err = await res.json();
+        setPaymentModal({
+          show: true,
+          message: err.Message || err.message || 'Bạn đã hết lượt miễn phí',
+          amount: err.PaymentAmount || 50000
+        });
+      } else {
+        const err = await res.json();
+        alert(err.message || "Lỗi khi tạo lịch trình AI");
+      }
+    } catch (e) {
+      alert("Lỗi kết nối server AI");
     } finally {
       setGenerating(false);
     }
@@ -1031,49 +1073,38 @@ export default function Home() {
 
   const handleAIPayment = async () => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: 'login' }));
-      return;
-    }
+    if (!token) return;
 
     try {
-      // 1. Lấy thông tin tài khoản nhận tiền
-      const payInfoRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/GetPaymentInfo`);
-      if (!payInfoRes.ok) {
-        alert('Không thể lấy thông tin thanh toán. Vui lòng thử lại sau.');
-        return;
-      }
-      const payInfo = await payInfoRes.json();
-
-      // 2. Gọi backend tạo / lấy đơn thanh toán AI (backend đã xử lý logic reuse / tạo mới)
-      const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/CreateAIPaymentOrder`, {
+      // Create payment order
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/CreateAIPaymentOrder`, {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         }
       });
 
-      const data = await orderRes.json();
+      if (res.ok) {
+        const data = await res.json();
+        const orderId = data.OrderId;
+        const amount = data.Amount || 50000;
 
-      if (!orderRes.ok) {
-        alert(data.message || 'Không thể tạo đơn thanh toán. Vui lòng thử lại.');
-        return;
+        // Get payment info
+        const payInfoRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/GetPaymentInfo`);
+        const payInfo = await payInfoRes.json();
+
+        // Generate VietQR
+        const qrUrl = `https://img.vietqr.io/image/${payInfo.bankBin}-${payInfo.accountNo}-${payInfo.template}.png?amount=${amount}&addInfo=${encodeURIComponent("GOWHERE AI " + orderId)}&accountName=${encodeURIComponent(payInfo.accountName)}`;
+
+        setPaymentModal(prev => ({
+          ...prev,
+          qrUrl,
+          orderId
+        }));
+      } else {
+        alert('Không thể tạo đơn thanh toán. Vui lòng thử lại.');
       }
-
-      const orderId = data.orderId;
-      const amount = data.amount || 50000;
-
-      // 3. Tạo URL VietQR từ thông tin ngân hàng + đơn hàng
-      const qrUrl = `https://img.vietqr.io/image/${payInfo.bankBin}-${payInfo.accountNo}-${payInfo.template}.png?amount=${amount}&addInfo=${encodeURIComponent("GOWHERE AI " + orderId)}&accountName=${encodeURIComponent(payInfo.accountName)}`;
-
-      // 4. Mở modal thanh toán với QR
-      setPaymentModal({
-        show: true,
-        message: data.message || 'Quét mã để thanh toán gói AI Unlimited',
-        amount,
-        qrUrl,
-        orderId
-      });
     } catch (error) {
       alert('Lỗi kết nối server');
     }

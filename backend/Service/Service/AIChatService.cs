@@ -482,11 +482,10 @@ Hãy trả lời ngắn gọn, súc tích và hữu ích.";
             var aiRequest = await _aiSuggestionRepo.GetByUserIdAsync(userId);
 
             // Allow repayment if turns are exhausted
-            //Temporarily remove this check to allow users to create payment orders even if they still have free turns, as they might want to top up in advance or for future use.
-            /* if (aiRequest != null && aiRequest.Count < aiRequest.AllowedCount)
-             {
-                 throw new InvalidOperationException($"Bạn vẫn còn {aiRequest.AllowedCount - aiRequest.Count} lượt. Hãy sử dụng hết trước khi nạp thêm!");
-             }*/
+            if (aiRequest != null && aiRequest.Count < aiRequest.AllowedCount)
+            {
+                throw new InvalidOperationException($"Bạn vẫn còn {aiRequest.AllowedCount - aiRequest.Count} lượt. Hãy sử dụng hết trước khi nạp thêm!");
+            }
 
             // Check if already has pending payment order
             if (aiRequest?.Order != null && aiRequest.Order.Status == "WaitPayment")
