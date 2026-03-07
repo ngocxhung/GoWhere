@@ -14,3 +14,5 @@ backend/obj/Debug/net8.0/GoWhere_Api.dll
 /backend/bin
 /backend/obj
 /backend/obj/Debug
+/backend/appsettings.json
+backend/appsettings.json

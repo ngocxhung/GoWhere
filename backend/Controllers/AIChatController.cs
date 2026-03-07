@@ -61,10 +61,7 @@ namespace GoWhere_Api.Controllers
                 }
 
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                {
-                    userId = "1"; // Default for debug
-                }
+              
 
                 var result = await _aiChatService.GenerateScheduleAsync(int.Parse(userId), request);
                 return Ok(result);

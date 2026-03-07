@@ -7,7 +7,7 @@ namespace GoWhere_Api.Model.DTOs.Request
         public Coordinate? Location { get; set; }
         public int ProvinceId { get; set; }
 
-        public string UserLocation { get; set; }
+        public string? UserLocation { get; set; }
 
         [Required(ErrorMessage = "Destination is required.")]
         public string Destination { get; set; }
