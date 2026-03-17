@@ -11,11 +11,30 @@ namespace GoWhere_Api.Controllers
     {
         private readonly IOrderRepo _orderRepo;
         private readonly IUserRepo _userRepo;
+        private readonly IWebHostEnvironment _env;
 
-        public AdminOrderController(IOrderRepo orderRepo, IUserRepo userRepo)
+        public AdminOrderController(IOrderRepo orderRepo, IUserRepo userRepo, IWebHostEnvironment env)
         {
             _orderRepo = orderRepo;
             _userRepo = userRepo;
+            _env = env;
+        }
+
+        /// <summary>
+        /// [ADMIN] Xem ảnh chứng từ chuyển khoản của đơn hàng
+        /// </summary>
+        [HttpGet("Receipt/{orderId}")]
+        public async Task<IActionResult> GetReceipt(int orderId)
+        {
+            var order = await _orderRepo.GetByIdAsync(orderId);
+            if (order == null)
+                return NotFound("Đơn hàng không tồn tại.");
+
+            var filePath = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", "receipts", $"order-{orderId}.jpg");
+            if (!System.IO.File.Exists(filePath))
+                return NotFound("Chưa có ảnh chứng từ.");
+
+            return PhysicalFile(filePath, "image/jpeg");
         }
 
         /// <summary>

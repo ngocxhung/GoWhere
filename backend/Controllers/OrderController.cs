@@ -1,6 +1,7 @@
 using GoWhere_Api.Model;
 using GoWhere_Api.Model.DTOs.Request;
 using GoWhere_Api.Repo.IRepo;
+using GoWhere_Api.Service.IService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -15,12 +16,46 @@ namespace GoWhere_Api.Controllers
         private readonly IOrderRepo _orderRepo;
         private readonly IUserRepo _userRepo;
         private readonly IConfiguration _config;
+        private readonly IFileService _fileService;
 
-        public OrderController(IOrderRepo orderRepo, IUserRepo userRepo, IConfiguration config)
+        public OrderController(IOrderRepo orderRepo, IUserRepo userRepo, IConfiguration config, IFileService fileService)
         {
             _orderRepo = orderRepo;
             _userRepo = userRepo;
             _config = config;
+            _fileService = fileService;
+        }
+
+        /// <summary>
+        /// [USER] Upload ảnh chứng từ chuyển khoản cho đơn hàng
+        /// </summary>
+        [HttpPost("UploadReceipt/{orderId}")]
+        public async Task<IActionResult> UploadReceipt(int orderId, IFormFile file)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized("User not found.");
+
+                var order = await _orderRepo.GetByIdAsync(orderId);
+                if (order == null)
+                    return NotFound("Đơn hàng không tồn tại.");
+
+                if (order.UserId != int.Parse(userId))
+                    return Forbid("Bạn không có quyền upload ảnh cho đơn hàng này.");
+
+                var fileUrl = await _fileService.UploadReceiptAsync(file, orderId);
+                return Ok(new { Message = "Upload thành công", FileUrl = fileUrl });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Lỗi khi tải ảnh", Details = ex.Message });
+            }
         }
 
         [AllowAnonymous]

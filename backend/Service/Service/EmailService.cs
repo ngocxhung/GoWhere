@@ -8,13 +8,17 @@ namespace GoWhere_Api.Service.Service
     {
         private readonly IConfiguration _configuration;
         private readonly ILogger<EmailService> _logger;
+        private readonly string _senderEmail;
+        private readonly string PhoneNumber = "0966478235";
+
 
         public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
         {
             _configuration = configuration;
             _logger = logger;
+            _senderEmail = _configuration["EmailSettings:SenderEmail"];
         }
-
+   
         public async Task SendPaymentConfirmationEmailAsync(string toEmail, string userName, int orderId, double amount)
         {
             var subject = "🎉 Thanh toán thành công - GoWhere AI Chat";
@@ -365,8 +369,8 @@ namespace GoWhere_Api.Service.Service
                             <div style='background-color: #F9FAFB; border-radius: 8px; padding: 20px; text-align: center;'>
                                 <p style='margin: 0 0 10px; color: #0B2447; font-size: 14px;'>Cần hỗ trợ?</p>
                                 <p style='margin: 0; color: #6B7280; font-size: 14px;'>
-                                    Email: <a href='mailto:support@gowhere.com' style='color: #00A6FF; text-decoration: none;'>support@gowhere.com</a><br>
-                                    Hotline: <a href='tel:0123456789' style='color: #00A6FF; text-decoration: none;'>0123 456 789</a>
+                                    Email: <a href='mailto:{_senderEmail}' style='color: #00A6FF; text-decoration: none;'>{_senderEmail}</a><br>
+                                    Hotline: <a href='tel:{PhoneNumber}' style='color: #00A6FF; text-decoration: none;'>{PhoneNumber}</a>
                                 </p>
                             </div>
                         </td>

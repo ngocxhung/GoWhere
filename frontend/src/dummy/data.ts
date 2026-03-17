@@ -1,9 +1,26 @@
+export interface CuisineItem {
+    name: string;
+    restaurant?: string;
+    priceRange?: string;
+    mealType?: string;
+    imageUrl?: string;
+    googleMapsUrl?: string;
+}
+
 export interface Activity {
     t: string;
     name: string;
     price: number;
     description?: string;
     id?: number;
+    openingHours?: string;
+    closingHours?: string;
+    highlights?: string[];
+    cuisine?: CuisineItem[];
+    suggestedImageUrl?: string;
+    mediaUrls?: string[];
+    tips?: string;
+    googleMapsLink?: string;
 }
 
 export interface Video {
@@ -120,26 +137,50 @@ export const danangReels: Reel[] = [
 export const bannerSlides = [
     {
         title: "Kỳ quan thiên nhiên",
-        sub: "Những điểm đến không thể bỏ qua tại dải đất hình chữ S.",
-        video: "/media/vd2.mp4",
+        sub: "Vịnh Hạ Long – Di sản thiên nhiên thế giới kỳ vĩ bậc nhất Việt Nam.",
+        image: "/media/Banner_Image/Ha Long Bay Vietnam.jpg",
+        btnText: "Khám phá ngay"
+    },
+    {
+        title: "Thiên đường nghỉ dưỡng",
+        sub: "Phú Quốc – Hòn đảo ngọc xanh giữa làn nước trong vắt.",
+        image: "/media/Banner_Image/Phu Quoc Island_ A Laid back, Leisure Getaway.jpg",
+        btnText: "Đặt chỗ ngay"
+    },
+    {
+        title: "Đỉnh cao mây phủ",
+        sub: "Sa Pa – Miền đất sương mù và những thửa ruộng bậc thang huyền bí.",
+        image: "/media/Banner_Image/Du lịch Sapa tháng 2 có gì_.jpg",
         btnText: "Khám phá ngay"
     },
     {
         title: "Trải nghiệm văn hóa",
-        sub: "Hòa mình vào nhịp sống và nét đẹp truyền thống địa phương.",
-        video: "/media/vd3.mp4",
+        sub: "Hòa mình vào nhịp sống và nét đẹp truyền thống Việt Nam.",
+        image: "/media/Banner_Image/Vietnam.jpg",
         btnText: "Xem lịch trình"
     },
     {
-        title: "Thiên đường nghỉ dưỡng",
-        sub: "Tận hưởng không gian thư giãn tuyệt vời bên bờ biển xanh.",
-        video: "/media/vd4.mp4",
+        title: "Nhịp sống đô thị",
+        sub: "TP. Hồ Chí Minh – Thành phố năng động không bao giờ ngủ.",
+        image: "/media/Banner_Image/hcm.jpg",
+        btnText: "Khám phá ngay"
+    },
+    {
+        title: "Biển xanh bát ngát",
+        sub: "Vũng Tàu – Điểm nghỉ dưỡng biển gần gũi và yên bình.",
+        image: "/media/Banner_Image/13 Essential Things to Do in Vung Tau, Vietnam.jpg",
         btnText: "Đặt chỗ ngay"
+    },
+    {
+        title: "Thung lũng vàng",
+        sub: "Tú Lệ – Cánh đồng lúa chín vàng óng đẹp như tranh vẽ.",
+        image: "/media/Banner_Image/Tu le.jpg",
+        btnText: "Khám phá ngay"
     },
     {
         title: "Hành trình bất tận",
         sub: "Cùng trợ lý AI lên kế hoạch cho chuyến đi mơ ước của bạn.",
-        video: "/media/vd5.mp4",
+        image: "/media/Banner_Image/tải xuống.jpg",
         btnText: "Bắt đầu hành trình"
     },
 ];

@@ -18,6 +18,7 @@ namespace GoWhere_Api.Service.Service
         private readonly ILogger<PaymentService> _logger;
         private readonly HttpClient _httpClient;
         private const decimal AI_CHAT_PRICE = 50000; // 50,000 VND
+        private const int AI_TURNS_PER_PACKAGE = 25;
 
         public PaymentService(
             IOrderRepo orderRepo,
@@ -135,21 +136,24 @@ namespace GoWhere_Api.Service.Service
                 _logger.LogError(ex, "Error occurred while notifying user about payment success. UserId: {UserId}, OrderId: {OrderId}, Amount: {Amount}", order.UserId, order.OrderId, order.TotalPrice);
                 // Log error nhưng không throw để không ảnh hưởng đến flow chính
             }
-            // Cập nhật AISuggestionRequest
+            // Cập nhật AISuggestionRequest: reset lại gói = số lượt đã dùng + 25
             var aiRequest = await _aiSuggestionRepo.GetByUserIdAsync(order.UserId);
             if (aiRequest != null)
             {
                 aiRequest.OrderId = orderId;
                 aiRequest.Price = order.TotalPrice;
+                // Đặt lại hạn mức mới = lượt đã dùng hiện tại + 25
+                aiRequest.AllowedCount = aiRequest.Count + AI_TURNS_PER_PACKAGE;
                 await _aiSuggestionRepo.UpdateAsync(aiRequest);
             }
             else
             {
-                // Tạo mới nếu chưa có
+                // Tạo mới nếu chưa có: gói 25 lượt (Count = 0)
                 aiRequest = new AISuggestionRequest
                 {
                     UserId = order.UserId,
                     Count = 0,
+                    AllowedCount = AI_TURNS_PER_PACKAGE,
                     Price = order.TotalPrice,
                     OrderId = orderId
                 };

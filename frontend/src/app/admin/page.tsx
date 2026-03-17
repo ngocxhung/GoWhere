@@ -141,7 +141,8 @@ const AdminPage = () => {
     const confirmOrder = async (id: number) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Admin/Orders/${id}/Confirm`, {
+            // Xác nhận thanh toán qua PaymentController để đồng bộ lượt AI
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Payment/ConfirmPayment/${id}`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -806,15 +807,30 @@ const CarManagement = ({ data }: any) => (
     </div>
 );
 
+const STATUS_OPTIONS = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'Pending', label: '🔵 Đang xử lý' },
+    { value: 'WaitPayment', label: '🟡 Chờ thanh toán' },
+    { value: 'Payed', label: '✅ Đã thanh toán' },
+    { value: 'Cancelled', label: '❌ Đã hủy' }
+];
+
 const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
     const money = (x: number) => new Intl.NumberFormat("vi-VN").format(x);
+    const [receiptPreviewOrderId, setReceiptPreviewOrderId] = useState<number | null>(null);
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
 
     // Filter out null/undefined items
     const validData = (data || []).filter((o: any) => o && o.orderId);
+    const filteredData = statusFilter === 'all'
+        ? validData
+        : validData.filter((o: any) => (o.status || 'Pending') === statusFilter);
 
     return (
         <div className="orders-container">
-            <div className="orders-stats-mini">
+            <div className="orders-filter-row">
+                <div className="orders-stats-mini">
                 <div className="mini-stat">
                     <span className="mini-label">Tổng đơn</span>
                     <strong>{validData.length}</strong>
@@ -827,6 +843,20 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                     <span className="mini-label">Đã thanh toán</span>
                     <strong>{validData.filter((o: any) => o.status === 'Payed').length}</strong>
                 </div>
+                </div>
+                <div className="orders-filter-select">
+                    <label>Lọc theo trạng thái:</label>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="status-filter-dropdown"
+                    >
+                        {STATUS_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                    </select>
+                    <span className="filter-count">({filteredData.length} đơn)</span>
+                </div>
             </div>
 
             <div className="table-wrapper-payment">
@@ -836,13 +866,14 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                             <th>Mã đơn</th>
                             <th>Khách hàng</th>
                             <th>Số tiền</th>
+                            <th>Ảnh xác nhận</th>
                             <th>Trạng thái</th>
                             <th>Ngày tạo</th>
                             <th>Hành động</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {validData.map((o: any) => {
+                        {filteredData.map((o: any) => {
                             const isPayed = o.status === 'Payed';
                             const orderId = o.orderId || o.OrderId || 0;
 
@@ -861,6 +892,21 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                                         </div>
                                     </td>
                                     <td><span className="price-cell">{money(o.totalPrice || 0)} đ</span></td>
+                                    <td>
+                                        <div className="receipt-cell">
+                                            <img
+                                                src={`${apiUrl}/uploads/receipts/order-${orderId}.jpg`}
+                                                alt="Chứng từ"
+                                                className="receipt-thumb"
+                                                onClick={() => setReceiptPreviewOrderId(orderId)}
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                    (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                                }}
+                                            />
+                                            <span className="receipt-placeholder hidden">Chưa có</span>
+                                        </div>
+                                    </td>
                                     <td>
                                         <select
                                             className={`status-dropdown status-${(o.status || 'pending').toLowerCase()}`}
@@ -894,9 +940,33 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                 </table>
             </div>
 
+            {receiptPreviewOrderId && (
+                <div className="receipt-modal-overlay" onClick={() => setReceiptPreviewOrderId(null)}>
+                    <div className="receipt-modal-box" onClick={(e) => e.stopPropagation()}>
+                        <button className="receipt-modal-close" onClick={() => setReceiptPreviewOrderId(null)}>×</button>
+                        <h4>Ảnh chứng từ đơn #{receiptPreviewOrderId}</h4>
+                        <img
+                            src={`${apiUrl}/uploads/receipts/order-${receiptPreviewOrderId}.jpg`}
+                            alt="Chứng từ"
+                            className="receipt-full-img"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = '';
+                                (e.target as HTMLImageElement).alt = 'Không tìm thấy ảnh';
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
             <style jsx>{`
                 .orders-container { display: flex; flex-direction: column; gap: 24px; }
-                .orders-stats-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+                .orders-filter-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; }
+                .orders-stats-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; flex: 1; min-width: 0; }
+                .orders-filter-select { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+                .orders-filter-select label { font-size: 14px; font-weight: 600; color: #64748b; }
+                .status-filter-dropdown { padding: 7px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; font-size: 14px; font-weight: 600; background: white; cursor: pointer; outline: none; }
+                .status-filter-dropdown:focus { border-color: #6366f1; }
+                .filter-count { font-size: 13px; color: #94a3b8; }
                 .mini-stat { background: white; padding: 16px 20px; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; }
                 .mini-label { display: block; font-size: 12px; color: #64748b; margin-bottom: 6px; font-weight: 600; }
                 .mini-stat strong { font-size: 24px; color: #1ea1f2; font-weight: 800; }
@@ -931,6 +1001,17 @@ const PaymentManagement = ({ data, onConfirm, onUpdateStatus }: any) => {
                 .btn-confirm:hover { background: #059669; transform: translateY(-1px); }
                 .btn-view-only { width: 32px; height: 32px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #64748b; border-radius: 8px; display: grid; place-items: center; cursor: pointer; border: none; }
                 .btn-view-only:hover { background: #e2e8f0; color: #0f172a; }
+
+                .receipt-cell { min-width: 60px; }
+                .receipt-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid #e2e8f0; transition: 0.2s; }
+                .receipt-thumb:hover { border-color: #1ea1f2; box-shadow: 0 2px 8px rgba(30,161,242,0.3); }
+                .receipt-placeholder { font-size: 12px; color: #94a3b8; display: inline-block; padding: 8px 12px; background: #f8fafc; border-radius: 8px; }
+                .receipt-placeholder.hidden { display: none !important; }
+                .receipt-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 3000; display: grid; place-items: center; padding: 24px; }
+                .receipt-modal-box { background: white; border-radius: 16px; padding: 24px; position: relative; max-width: 90vw; max-height: 90vh; overflow: auto; }
+                .receipt-modal-close { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border: none; background: #f1f5f9; border-radius: 50%; font-size: 20px; cursor: pointer; color: #64748b; }
+                .receipt-modal-box h4 { margin: 0 0 16px 0; font-size: 16px; color: #0f172a; }
+                .receipt-full-img { max-width: 100%; max-height: 70vh; border-radius: 8px; border: 1px solid #e2e8f0; }
             `}</style>
         </div>
     );

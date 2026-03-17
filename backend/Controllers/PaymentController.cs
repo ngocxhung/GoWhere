@@ -129,7 +129,6 @@ namespace GoWhere_Api.Controllers
         /// </summary>
         [HttpPost("TestEmail")]
         [Obsolete("Chỉ dùng cho mục đích test, không sử dụng trong môi trường production")]
-        [Authorize]
         public async Task<IActionResult> TestEmail([FromQuery] string toEmail)
         {
             try

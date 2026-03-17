@@ -1,4 +1,4 @@
-﻿using GoWhere_Api.Model;
+using GoWhere_Api.Model;
 using GoWhere_Api.Model.DTOs.Request;
 using GoWhere_Api.Model.DTOs.Response;
 

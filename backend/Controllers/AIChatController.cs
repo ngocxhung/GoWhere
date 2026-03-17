@@ -1,4 +1,4 @@
-﻿using GoWhere_Api.Model.DTOs.Request;
+using GoWhere_Api.Model.DTOs.Request;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -239,5 +239,6 @@ namespace GoWhere_Api.Controllers
                 return StatusCode(500, new { Message = "An error occurred", Details = ex.Message });
             }
         }
+
     }
 }

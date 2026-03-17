@@ -32,10 +32,15 @@ namespace GoWhere_Api.Repo.Repo
         {
             if (request == null) return;
 
-            // Use direct SQL to increment count only to avoid overwriting AllowedCount
+            _context.AISuggestionRequests.Update(request);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task IncrementCountAsync(int userId)
+        {
             await _context.Database.ExecuteSqlRawAsync(
-                "UPDATE [AISuggestionRequests] SET [Count] = [Count] + 1 WHERE [UserId] = {0}", 
-                request.UserId);
+                "UPDATE [AISuggestionRequests] SET [Count] = [Count] + 1 WHERE [UserId] = {0}",
+                userId);
         }
 
         public async Task<int> GetRequestCountAsync(int userId)

@@ -23,7 +23,8 @@ import {
   CheckCircleFilled,
   ClockCircleOutlined,
   HomeOutlined,
-  CarOutlined
+  CarOutlined,
+  EnvironmentOutlined
 } from '@ant-design/icons';
 import {
   demoVideos,
@@ -33,6 +34,7 @@ import {
   itineraryTemplates,
   endTemplate,
   Activity,
+  CuisineItem,
   Video,
   Tour,
   hotels,
@@ -315,12 +317,9 @@ const Banner = () => {
         <div className="slides" style={{ transform: `translateX(-${current * 100}%)` }}>
           {bannerSlides.map((slide, i) => (
             <div key={i} className="slide">
-              <video
-                src={slide.video}
-                autoPlay
-                loop
-                muted
-                playsInline
+              <img
+                src={slide.image}
+                alt={slide.title}
                 className="banner-video"
               />
               <div className="banner-content">
@@ -347,7 +346,7 @@ const Banner = () => {
           .slides { display: flex; width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
           .slide { min-width: 100%; height: 100%; position: relative; }
           .slide::before { content:''; position:absolute; inset:0; background: linear-gradient(to right, rgba(0,0,0,0.6) 0%, transparent 60%); z-index:1; }
-          .banner-video { width: 100%; height: 100%; object-fit: cover; }
+          .banner-video { width: 100%; height: 100%; object-fit: cover; display: block; }
           .banner-content { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 10%; z-index: 2; }
           .banner-text { color: white; max-width: 600px; animation: fadeInUp 0.8s ease-out; }
           .banner-text h2 { font-size: 56px; font-weight: 800; margin-bottom: 20px; text-shadow: 0 4px 30px rgba(0,0,0,0.5); }
@@ -841,7 +840,7 @@ const VideoRecommendations = ({ videos, onSelect }: { videos: Video[], onSelect:
   </section>
 );
 
-const Itinerary = ({ acts, onDaySelect, currentDay, totalCost, aiResult }: { acts: Record<number, Activity[]>, onDaySelect: (d: number) => void, currentDay: number, totalCost: number, aiResult?: any }) => {
+const Itinerary = ({ acts, onDaySelect, currentDay, totalCost, aiResult, onImageClick }: { acts: Record<number, Activity[]>, onDaySelect: (d: number) => void, currentDay: number, totalCost: number, aiResult?: any, onImageClick?: (src: string) => void }) => {
   const days = Object.keys(acts).map(Number);
   return (
     <section id="itinerary" className="section-block-compact">
@@ -859,17 +858,86 @@ const Itinerary = ({ acts, onDaySelect, currentDay, totalCost, aiResult }: { act
         </div>
         <div className="acts-panel">
           <div className="acts-list">
-            {(acts[currentDay] || []).map((a, i) => (
-              <div key={i} className="act-card">
-                <div className="act-time">{a.t}</div>
-                <div className="act-info">
-                  <strong>{a.name}</strong>
-                  {a.description && <p className="act-desc">{a.description}</p>}
-                  <span className="act-price">{a.price > 0 ? money(a.price) + ' VND' : 'Miễn phí'}</span>
+            {(acts[currentDay] || []).map((a, i) => {
+              const heroImg = a.suggestedImageUrl || (a.mediaUrls && a.mediaUrls[0]);
+              const mealBadgeColor: Record<string, string> = {
+                BREAKFAST: '#f97316', LUNCH: '#10b981', DINNER: '#8b5cf6', SNACK: '#f59e0b'
+              };
+              return (
+                <div key={i} className="act-card">
+                  <div className="act-time-col">
+                    <div className="act-dot" />
+                    <div className="act-time">{a.t}</div>
+                    {i < (acts[currentDay] || []).length - 1 && <div className="act-line" />}
+                  </div>
+                  <div className="act-body">
+                    <div className="act-name-row">
+                      <strong className="act-name">{a.name}</strong>
+                      {a.googleMapsLink && (
+                        <a href={a.googleMapsLink} target="_blank" rel="noopener noreferrer" className="maps-btn">
+                          <EnvironmentOutlined /> Bản đồ
+                        </a>
+                      )}
+                    </div>
+                    {(a.openingHours || a.closingHours) && (
+                      <div className="act-hours">🕐 {a.openingHours || '--:--'} – {a.closingHours || '--:--'}</div>
+                    )}
+                    {heroImg && (
+                      <img
+                        src={heroImg}
+                        alt={a.name}
+                        className="act-hero"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        onClick={() => onImageClick && onImageClick(heroImg)}
+                      />
+                    )}
+                    {a.description && <p className="act-desc">{a.description}</p>}
+                    {a.tips && <div className="act-tips-row">💡 {a.tips}</div>}
+                    {a.highlights && a.highlights.length > 0 && (
+                      <div className="act-highlights">
+                        {a.highlights.map((h, hi) => <span key={hi} className="highlight-badge">{h}</span>)}
+                      </div>
+                    )}
+                    {a.cuisine && a.cuisine.length > 0 && (
+                      <div className="act-cuisine-section">
+                        <div className="act-cuisine-title">🍴 ẨM THỰC</div>
+                        {a.cuisine.map((c, ci) => (
+                          <div key={ci} className="food-card">
+                            {c.imageUrl && (
+                              <img
+                                src={c.imageUrl}
+                                alt={c.name}
+                                className="food-img"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                onClick={() => onImageClick && onImageClick(c.imageUrl!)}
+                              />
+                            )}
+                            <div className="food-info">
+                              <div className="food-name">
+                                {c.name}
+                                {c.googleMapsUrl && (
+                                  <a href={c.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="food-maps-btn" title="Xem quán trên Maps">
+                                    <EnvironmentOutlined />
+                                  </a>
+                                )}
+                              </div>
+                              {c.restaurant && <div className="food-rest">{c.restaurant}</div>}
+                              {c.priceRange && <div className="food-price">{c.priceRange}</div>}
+                            </div>
+                            {c.mealType && (
+                              <span className="food-badge" style={{ background: mealBadgeColor[c.mealType] || '#64748b' }}>
+                                {c.mealType}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <span className="act-price">{a.price > 0 ? money(a.price) + ' VND' : 'Miễn phí'}</span>
+                  </div>
                 </div>
-                <button className="btn-icon"><EditOutlined /></button>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="it-footer">
             <div className="total"><DollarOutlined /> Tổng: <strong>{money(totalCost)} VND</strong></div>
@@ -878,30 +946,58 @@ const Itinerary = ({ acts, onDaySelect, currentDay, totalCost, aiResult }: { act
         </div>
       </div>
       <style jsx>{`
-          .itinerary-layout { display: grid; grid-template-columns: 180px 1fr; gap: 20px; }
+          .section-block-compact { padding: 0; margin: 0; }
+          .section-head-compact { margin-bottom: 20px; }
+          .section-head-compact h3 { font-size: 22px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+          .ai-summary-compact { background: #f0f9ff; border: 1px dashed #1ea1f2; border-radius: 12px; padding: 12px 16px; font-size: 13px; color: #0369a1; font-style: italic; line-height: 1.5; margin-top: 12px; }
+
+          .itinerary-layout { display: grid; grid-template-columns: 160px 1fr; gap: 20px; }
           @media (max-width: 900px) { .itinerary-layout { grid-template-columns: 1fr; } }
+
           .day-btn { padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: 0.3s; background: white; }
           .day-btn:hover { border-color: var(--brand); background: #f8fafc; }
           .day-btn.active { border-color: var(--brand); background: #f0f9ff; }
           .day-btn strong { display: block; margin-bottom: 2px; font-size: 15px; }
           .day-btn span { font-size: 11px; color: var(--muted); }
-          .act-card { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; grid-template-columns: 60px 1fr auto; gap: 12px; align-items: start; margin-bottom: 10px; transition: 0.2s; }
-          .act-card:hover { border-color: var(--brand); box-shadow: 0 2px 8px rgba(30,161,242,0.1); }
-          .act-time { background: #f0f9ff; color: var(--brand); font-weight: 800; padding: 6px 8px; border-radius: 8px; text-align: center; font-size: 13px; }
-          .act-info { min-width: 0; }
-          .act-info strong { display: block; margin-bottom: 4px; font-size: 14px; color: #0f172a; }
-          .act-desc { font-size: 12px; color: #64748b; line-height: 1.4; margin-bottom: 4px; }
-          .act-price { font-size: 13px; color: #10b981; font-weight: 600; }
-          .it-footer { margin-top: 20px; padding: 16px 20px; background: linear-gradient(135deg, #1ea1f2, #0ea5e9); border-radius: 16px; color: white; display: flex; justify-content: space-between; align-items: center; }
+
+          /* Timeline-style act cards */
+          .acts-list { display: flex; flex-direction: column; }
+          .act-card { display: grid; grid-template-columns: 64px 1fr; gap: 0; }
+          .act-time-col { display: flex; flex-direction: column; align-items: center; padding-top: 3px; }
+          .act-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--brand); border: 2px solid white; box-shadow: 0 0 0 2px var(--brand); flex-shrink: 0; }
+          .act-time { font-size: 11px; font-weight: 800; color: var(--brand); margin-top: 5px; text-align: center; }
+          .act-line { flex: 1; width: 2px; background: #e5e7eb; margin: 5px 0; min-height: 30px; }
+          .act-body { background: white; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; transition: 0.2s; }
+          .act-body:hover { border-color: var(--brand); box-shadow: 0 2px 8px rgba(30,161,242,0.08); }
+          .act-name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+          .act-name { font-size: 15px; font-weight: 800; color: #0f172a; }
+          .maps-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #667eea; text-decoration: none; padding: 3px 8px; background: #f0f9ff; border: 1px solid #e0e7ff; border-radius: 6px; white-space: nowrap; transition: 0.2s; flex-shrink: 0; }
+          .maps-btn:hover { background: #667eea; color: white; border-color: #667eea; }
+          .act-hours { font-size: 11px; color: var(--brand); font-weight: 600; margin-bottom: 8px; }
+          .act-hero { width: 100%; height: 160px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--line); }
+          .act-desc { font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 8px; }
+          .act-tips-row { font-size: 12px; color: #7c2d12; background: #fff7ed; border-left: 3px solid #f97316; padding: 6px 10px; border-radius: 0 8px 8px 0; margin-bottom: 8px; }
+          .act-highlights { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+          .highlight-badge { background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; border: 1px solid #bfdbfe; }
+          .act-price { font-size: 13px; color: #10b981; font-weight: 700; display: block; text-align: right; border-top: 1px dashed #e5e7eb; padding-top: 8px; margin-top: 8px; }
+
+          /* Cuisine section */
+          .act-cuisine-section { background: #fafafa; border-radius: 10px; padding: 10px; border: 1px solid #f1f5f9; margin-bottom: 8px; }
+          .act-cuisine-title { font-size: 11px; font-weight: 800; color: #374151; margin-bottom: 8px; letter-spacing: 0.5px; }
+          .food-card { display: flex; align-items: center; gap: 10px; background: white; border-radius: 10px; padding: 8px; border: 1px solid #e5e7eb; margin-bottom: 6px; position: relative; overflow: hidden; }
+          .food-card:last-child { margin-bottom: 0; }
+          .food-img { width: 48px; height: 48px; object-fit: cover; border-radius: 7px; flex-shrink: 0; }
+          .food-info { flex: 1; min-width: 0; }
+          .food-name { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 2px; display: flex; align-items: center; gap: 4px; }
+          .food-maps-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; font-size: 11px; color: #667eea; text-decoration: none; background: #f0f9ff; border: 1px solid #e0e7ff; border-radius: 50%; transition: 0.2s; flex-shrink: 0; }
+          .food-maps-btn:hover { background: #667eea; color: white; border-color: #667eea; }
+          .food-rest { font-size: 11px; color: #64748b; margin-bottom: 2px; }
+          .food-price { font-size: 12px; color: #10b981; font-weight: 600; }
+          .food-badge { font-size: 9px; font-weight: 800; color: white; padding: 2px 7px; border-radius: 5px; position: absolute; top: 6px; right: 6px; letter-spacing: 0.3px; }
+
+          .it-footer { margin-top: 16px; padding: 14px 18px; background: linear-gradient(135deg, #1ea1f2, #0ea5e9); border-radius: 14px; color: white; display: flex; justify-content: space-between; align-items: center; }
           .total { font-size: 14px; }
           .total strong { font-size: 18px; margin-left: 6px; }
-          .btn-icon { background: none; border: none; font-size: 16px; color: #94a3b8; cursor: pointer; padding: 4px; transition: 0.2s; }
-          .btn-icon:hover { color: var(--brand); }
-          
-          .section-block-compact { padding: 0; margin: 0; }
-          .section-head-compact { margin-bottom: 20px; }
-          .section-head-compact h3 { font-size: 22px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-          .ai-summary-compact { background: #f0f9ff; border: 1px dashed #1ea1f2; border-radius: 12px; padding: 12px 16px; font-size: 13px; color: #0369a1; font-style: italic; line-height: 1.5; margin-top: 12px; }
         `}</style>
     </section>
   );
@@ -941,23 +1037,123 @@ export default function Home() {
     message: '',
     amount: 0
   });
+  const [receiptUploaded, setReceiptUploaded] = useState(false);
+  const [receiptUploading, setReceiptUploading] = useState(false);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [usageInfo, setUsageInfo] = useState<any>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
-  // Videos theo tỉnh
-  const provinceVideos: Record<number, string[]> = {
-    16: [ // Hà Nội
-      '/media/short/16.mp4',
-      '/media/short/shutterstock_3725692797.mp4',
-      '/media/short/shutterstock_3775625057.mp4',
-      '/media/short/shutterstock_3857698879.mp4'
-    ],
-    33: [ // Quảng Nam
-      '/media/short/33.mp4'
-    ]
+  const closePaymentModal = () => {
+    setPaymentModal({ show: false, message: '', amount: 0 });
+    setReceiptUploaded(false);
+    setReceiptError(null);
   };
 
-  const currentVideos = scheduleProvinceId ? (provinceVideos[scheduleProvinceId] || []) : [];
-  const provinceName = scheduleProvinceId === 16 ? 'Hà Nội' : scheduleProvinceId === 33 ? 'Quảng Nam' : 'Điểm đến';
+  const checkUsageLimit = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/CheckUsageLimit`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUsageInfo(data);
+      }
+    } catch (error) {
+      console.error('Failed to check usage limit:', error);
+    }
+  };
+
+  // Map tên tỉnh (theo DB) -> tên thư mục chứa video trong /media/short/Province_Video
+  const provinceVideoFolders: Record<string, string> = {
+    'An Giang': 'An Giang',
+    'Bình Thuận': 'Binh Thuan',
+    'Bà Rịa - Vũng Tàu': 'Bà Rịa - Vũng Tàu',
+    'Bình Dương': 'Bình Dương',
+    'Cần Thơ': 'Cần Thơ',
+    'Đắk Lắk': 'DakLak',
+    'Hải Phòng': 'Hải Phòng',
+    'Khánh Hòa': 'Khánh Hòa',
+    'Kiên Giang': 'Kiên Giang',
+    'Lào Cai': 'Lào Cai',
+    'Lâm Đồng': 'Lâm Đồng',
+    'Ninh Bình': 'NinhBinh',
+    'Phú Yên': 'Phu Yen',
+    'Quảng Nam': 'Quang Nam',
+    'Quảng Ninh': 'Quảng Ninh',
+    'Thừa Thiên Huế': 'Thừa Thiên Huế'
+  };
+
+  // Mỗi thư mục có đúng 1 video (đã quét từ public/media/short/Province_Video)
+  const provinceVideoFileByFolder: Record<string, string> = {
+    'An Giang': 'tiktok_video_2 (1).mp4',
+    'Binh Thuan': 'Binh_Thuan_1.mp4',
+    'Bà Rịa - Vũng Tàu': 'tiktok_video_2 (4).mp4',
+    'Bình Dương': '3806174819-preview.mp4',
+    'Cần Thơ': '3918074745-preview.mp4',
+    'DakLak': 'Dak_Lak_1.mp4',
+    'Hải Phòng': '1107097025-preview.mp4',
+    'Khánh Hòa': '1040347613-preview.mp4',
+    'Kiên Giang': '3938770803-preview.mp4',
+    'Lào Cai': '10386954-hd_3840_2160_30fps.mp4',
+    'Lâm Đồng': '1032695093-preview.mp4',
+    'NinhBinh': 'Ninh Binh - 4k UHD 60fps .mp4',
+    'Phu Yen': 'Phu_Yen_1.mp4',
+    'Quang Nam': 'Quang_Nam_1.mp4',
+    'Quảng Ninh': '1101373605-preview.mp4',
+    'Thừa Thiên Huế': '1032695093-preview.mp4'
+  };
+
+  // Video fallback khi tỉnh chưa có folder riêng
+  const fallbackVideos: string[] = ['/media/short/36.mp4', '/media/tt1.mp4', '/media/tt2.mp4'];
+
+  // Lấy danh sách video theo tỉnh dựa trên scheduleProvinceId và danh sách provinces từ API
+  const getProvinceVideos = (provinceId: number | null): string[] => {
+    if (!provinceId) return fallbackVideos;
+    const province = provinces.find(p => p.provinceId === provinceId);
+    if (!province) return fallbackVideos;
+
+    const folder = provinceVideoFolders[province.provinceName];
+    if (!folder) return fallbackVideos;
+
+    const file = provinceVideoFileByFolder[folder];
+    if (!file) return fallbackVideos;
+
+    const rawPath = `/media/short/Province_Video/${folder}/${file}`;
+    return [encodeURI(rawPath)];
+  };
+
+  const currentVideos = getProvinceVideos(scheduleProvinceId);
+
+  const getYouTubeEmbedUrl = (url: string): string => {
+    try {
+      if (!url) return '';
+      // https://www.youtube.com/watch?v=ID or .../shorts/ID
+      const u = new URL(url);
+      if (u.hostname.includes('youtube.com')) {
+        if (u.pathname.startsWith('/shorts/')) {
+          const id = u.pathname.split('/')[2];
+          return `https://www.youtube.com/embed/${id}`;
+        }
+        const id = u.searchParams.get('v');
+        return id ? `https://www.youtube.com/embed/${id}` : url;
+      }
+      if (u.hostname.includes('youtu.be')) {
+        const id = u.pathname.replace('/', '');
+        return `https://www.youtube.com/embed/${id}`;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
+  const provinceName =
+    scheduleProvinceId && provinces.length
+      ? (provinces.find(p => p.provinceId === scheduleProvinceId)?.provinceName || 'Điểm đến')
+      : 'Điểm đến';
 
   useEffect(() => {
     const fetchTours = async () => {
@@ -999,6 +1195,7 @@ export default function Home() {
       }
     };
     fetchProvinces();
+    checkUsageLimit();
   }, []);
 
   const handleSearch = async (data: any) => {
@@ -1013,13 +1210,107 @@ export default function Home() {
       return alert("Vui lòng chọn điểm đến từ danh sách!");
     }
 
-    // Tạm thời: thay vì tạo lịch trình AI, chuyển sang tạo đơn thanh toán AI để test QR
     setGenerating(true);
     setItinerary(null);
     setAiResult(null);
+    setScheduleProvinceId(provinceId);
 
     try {
-      await handleAIPayment();
+      let userLocation = "Hà Nội, Việt Nam";
+      if (navigator.geolocation) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((res, rej) =>
+            navigator.geolocation.getCurrentPosition(res, rej)
+          );
+          userLocation = `${pos.coords.latitude},${pos.coords.longitude}`;
+        } catch (e) {
+          console.log("Using default location");
+        }
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/AIChat/GenerateSchedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          provinceId: provinceId,
+          userLocation: userLocation,
+          destination: data.hint,
+          pax: data.pax || 2,
+          budget: parseInt(data.budget) || 5000000,
+          numberOfDays: parseInt(data.days) || 4,
+          travelStyle: data.style || 'dynamic',
+          companionType: data.group || 'friends',
+          additionalRequirements: ""
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setAiResult(result);
+        setCurrentVideoIndex(0);
+        
+        // Parse daily itinerary into format for display
+        const parsedItinerary: Record<number, Activity[]> = {};
+        let totalCostCalc = 0;
+
+        if (result.dailyItinerary && Array.isArray(result.dailyItinerary)) {
+          result.dailyItinerary.forEach((day: any) => {
+            const dayActivities: Activity[] = [];
+            if (day.activities && Array.isArray(day.activities)) {
+              day.activities.forEach((act: any) => {
+                const spot = act.scenicSpot;
+                const cuisineList: CuisineItem[] = Array.isArray(spot?.cuisine)
+                  ? spot.cuisine
+                  : [];
+                dayActivities.push({
+                  t: act.time || '08:00',
+                  name: spot?.name || act.activity || 'Hoạt động',
+                  price: act.estimatedCost || 0,
+                  description: act.description || '',
+                  id: spot?.scenicSpotId,
+                  openingHours: spot?.openingHours,
+                  closingHours: spot?.closingHours,
+                  highlights: spot?.highlights,
+                  cuisine: cuisineList.length > 0 ? cuisineList : undefined,
+                  suggestedImageUrl: spot?.suggestedImageUrl,
+                  mediaUrls: spot?.mediaUrls,
+                  tips: spot?.tips,
+                  googleMapsLink: spot?.googleMapsLink,
+                });
+                totalCostCalc += act.estimatedCost || 0;
+              });
+            }
+            parsedItinerary[day.day] = dayActivities;
+          });
+        }
+
+        setItinerary(parsedItinerary);
+        setTotalCost(result.estimatedTotalCost || totalCostCalc);
+        setCurrentDay(1);
+        
+        // Refresh usage info
+        await checkUsageLimit();
+
+        // Scroll to itinerary
+        setTimeout(() => {
+          const el = document.getElementById('video-preview');
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+      } else {
+        const error = await response.json();
+        // Nếu hết lượt, hiển thị modal thanh toán
+        if (error.requiresPayment || error.message?.includes('hết lượt') || error.message?.includes('limit')) {
+          await handleAIPayment();
+        } else {
+          alert(error.message || 'Có lỗi xảy ra khi tạo lịch trình');
+        }
+      }
+    } catch (error) {
+      console.error('Schedule generation error:', error);
+      alert('Không thể kết nối đến server');
     } finally {
       setGenerating(false);
     }
@@ -1074,14 +1365,75 @@ export default function Home() {
         qrUrl,
         orderId
       });
+      setReceiptUploaded(false);
+      setReceiptError(null);
     } catch (error) {
       alert('Lỗi kết nối server');
+    }
+  };
+
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const orderId = paymentModal.orderId;
+    if (!file || !orderId) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    setReceiptUploading(true);
+    setReceiptError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/Order/UploadReceipt/${orderId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setReceiptError(data.message || 'Upload thất bại');
+        return;
+      }
+      setReceiptUploaded(true);
+    } catch {
+      setReceiptError('Lỗi kết nối');
+    } finally {
+      setReceiptUploading(false);
+      e.target.value = '';
     }
   };
 
   return (
     <main>
       <Banner />
+      
+      {usageInfo && (
+        <div className="container" style={{ marginTop: '40px' }}>
+          <div className={`usage-banner ${usageInfo.requiresPayment ? 'payment-required' : ''}`}>
+            <div className="usage-info">
+              <CheckCircleFilled style={{ color: usageInfo.requiresPayment ? '#f59e0b' : '#10b981', fontSize: '20px' }} />
+              <span>
+                {usageInfo.message || (usageInfo.requiresPayment ? (
+                  <>
+                    Bạn đã hết lượt tạo lịch trình. Thanh toán <strong>{money(usageInfo.paymentAmount)} VND</strong> để nhận thêm 5 lượt!
+                  </>
+                ) : (
+                  <>
+                    Bạn còn <strong>{usageInfo.remainingFreeRequests}</strong> lượt tạo lịch trình AI miễn phí.
+                  </>
+                ))}
+              </span>
+            </div>
+            {usageInfo.requiresPayment && (
+              <button className="payment-btn-banner" onClick={handleAIPayment}>
+                💳 Thanh toán ngay
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      
       <SearchSection onSearch={handleSearch} isGenerating={generating} provinces={provinces} />
       <Stats />
 
@@ -1092,28 +1444,66 @@ export default function Home() {
         </div>
       )}
 
-      <ToursSection tours={tours} onSelect={(tour) => setSelectedTour(tour)} />
-
       {/* Split Layout: Itinerary (2/3) + Video (1/3) */}
       {itinerary && (
         <div className="container split-layout-container" id="video-preview">
           <div className="itinerary-column">
-            <Itinerary acts={itinerary} currentDay={currentDay} onDaySelect={setCurrentDay} totalCost={totalCost} aiResult={aiResult} />
+            <Itinerary
+              acts={itinerary}
+              currentDay={currentDay}
+              onDaySelect={setCurrentDay}
+              totalCost={totalCost}
+              aiResult={aiResult}
+              onImageClick={(src) => setLightboxImage(src)}
+            />
           </div>
 
           {currentVideos.length > 0 && (
             <div className="video-column">
               <div className="video-sticky-wrapper">
                 <div className="video-carousel-wrapper">
-                  <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="carousel-video"
-                    key={currentVideoIndex}
-                    src={currentVideos[currentVideoIndex]}
-                  />
+                  {(() => {
+                    const src = currentVideos[currentVideoIndex];
+                    const isFileVideo = src && src.match(/\.(mp4|webm|ogg)(\?|$)/i);
+                    const isYouTube = src && (src.includes('youtube.com') || src.includes('youtu.be'));
+                    if (isFileVideo) {
+                      return (
+                        <video
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="carousel-video"
+                          key={currentVideoIndex}
+                          src={src}
+                        />
+                      );
+                    }
+                    if (isYouTube) {
+                      return (
+                        <iframe
+                          key={currentVideoIndex}
+                          className="carousel-video"
+                          src={getYouTubeEmbedUrl(src)}
+                          title="Video preview"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      );
+                    }
+                    // Fallback: cố gắng phát như video file
+                    return (
+                      <video
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="carousel-video"
+                        key={currentVideoIndex}
+                        src={src}
+                      />
+                    );
+                  })()}
 
                   <div className="video-overlay-compact">
                     <h4>{provinceName}</h4>
@@ -1167,9 +1557,9 @@ export default function Home() {
 
       {/* AI Payment Modal */}
       {paymentModal.show && (
-        <div className="payment-modal-overlay" onClick={() => setPaymentModal({ show: false, message: '', amount: 0 })}>
+        <div className="payment-modal-overlay" onClick={closePaymentModal}>
           <div className="payment-modal-box" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-btn" onClick={() => setPaymentModal({ show: false, message: '', amount: 0 })}>✕</button>
+            <button className="modal-close-btn" onClick={closePaymentModal}>✕</button>
 
             {!paymentModal.qrUrl ? (
               <div className="payment-content">
@@ -1193,7 +1583,23 @@ export default function Home() {
                   <span>Đơn #{paymentModal.orderId}</span>
                   <span className="highlight">{money(paymentModal.amount)} VND</span>
                 </div>
-                <button className="btn-done" onClick={() => setPaymentModal({ show: false, message: '', amount: 0 })}>
+                <div className="receipt-upload-section">
+                  <label className="receipt-upload-label">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={handleReceiptUpload}
+                      disabled={receiptUploading || receiptUploaded}
+                    />
+                    {receiptUploaded ? '✓ Đã tải ảnh chứng từ' : receiptUploading ? 'Đang tải...' : 'Chọn ảnh chứng từ chuyển khoản'}
+                  </label>
+                  {receiptError && <span className="receipt-error">{receiptError}</span>}
+                </div>
+                <button
+                  className="btn-done"
+                  disabled={!receiptUploaded}
+                  onClick={closePaymentModal}
+                >
                   ✓ Đã thanh toán
                 </button>
               </div>
@@ -1217,6 +1623,14 @@ export default function Home() {
           <p>© 2025 GoWhere AI • Proudly built for next-gen travel.</p>
         </div>
       </footer>
+
+      {lightboxImage && (
+        <div className="image-lightbox-overlay" onClick={() => setLightboxImage(null)}>
+          <div className="image-lightbox-inner" onClick={(e) => e.stopPropagation()}>
+            <img src={lightboxImage} alt="Preview" />
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         .ai-loading-state { padding: 80px 20px; text-align: center; }
@@ -1255,8 +1669,25 @@ export default function Home() {
         .qr-img { width: 200px; height: 200px; border-radius: 12px; margin: 16px 0; border: 1px solid #e5e7eb; }
         .pay-info-compact { display: flex; justify-content: space-between; padding: 12px 16px; background: #f8fafc; border-radius: 10px; margin-bottom: 16px; font-size: 13px; font-weight: 600; }
         .pay-info-compact .highlight { color: #1ea1f2; }
+        .receipt-upload-section { margin-bottom: 16px; text-align: center; }
+        .receipt-upload-label { display: inline-block; padding: 10px 16px; background: #f0f9ff; border: 1px dashed #1ea1f2; border-radius: 10px; font-size: 13px; color: #0369a1; cursor: pointer; transition: 0.2s; }
+        .receipt-upload-label:hover:not(:has(input:disabled)) { background: #e0f2fe; }
+        .receipt-upload-label input { display: none; }
+        .receipt-error { display: block; margin-top: 8px; font-size: 12px; color: #dc2626; }
         .btn-done { width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-        .btn-done:hover { background: #059669; }
+        .btn-done:hover:not(:disabled) { background: #059669; }
+        .btn-done:disabled { background: #94a3b8; cursor: not-allowed; }
+
+        /* Usage Banner */
+        .usage-banner { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+        .usage-banner.payment-required { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3); }
+        .usage-info { display: flex; align-items: center; gap: 12px; font-size: 16px; }
+        .usage-info strong { font-weight: 800; }
+        .payment-btn-banner { background: white; color: #f59e0b; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 15px; white-space: nowrap; }
+        .payment-btn-banner:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3); }
+        @media (max-width: 600px) {
+          .usage-banner { padding: 16px 20px; flex-direction: column; text-align: center; }
+        }
 
         /* Split Layout: 2/3 Itinerary + 1/3 Video */
         .split-layout-container { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; margin-top: 60px; align-items: start; }
@@ -1265,9 +1696,9 @@ export default function Home() {
         .video-column { position: relative; }
         .video-sticky-wrapper { position: sticky; top: 100px; }
         
-        /* Video Carousel Vertical */
+        /* Video Carousel Vertical (khung dọc, video linh hoạt dọc/ngang) */
         .video-carousel-wrapper { position: relative; border-radius: 20px; overflow: hidden; background: #000; box-shadow: 0 12px 32px rgba(0,0,0,0.2); aspect-ratio: 9/16; max-height: 700px; }
-        .carousel-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .carousel-video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
         .video-overlay-compact { position: absolute; bottom: 60px; left: 16px; right: 16px; z-index: 10; color: white; text-align: center; }
         .video-overlay-compact h4 { font-size: 20px; font-weight: 800; margin-bottom: 4px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
         .video-overlay-compact span { font-size: 13px; opacity: 0.9; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
@@ -1279,6 +1710,14 @@ export default function Home() {
         .dot-compact { width: 8px; height: 8px; background: rgba(255,255,255,0.5); border-radius: 50%; cursor: pointer; transition: 0.3s; }
         .dot-compact:hover { background: rgba(255,255,255,0.8); }
         .dot-compact.active { width: 24px; border-radius: 4px; background: white; }
+
+        /* Image lightbox */
+        .image-lightbox-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .image-lightbox-inner img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+
+        /* Zoom cursor for clickable images */
+        .act-hero { cursor: zoom-in; }
+        .food-img { cursor: zoom-in; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }

@@ -20,6 +20,7 @@ namespace GoWhere_Api.Service.Service
         private readonly HttpClient _httpClient;
         private const int FREE_REQUEST_LIMIT = 2;
         private const decimal PAYMENT_PRICE = 50000; // 50,000 VND
+        private const int PAID_TURNS_PER_PACKAGE = 25;
 
         public AIChatService(
             IAISuggestionRequestRepo aiSuggestionRepo,
@@ -36,6 +37,7 @@ namespace GoWhere_Api.Service.Service
             _provinceRepo = provinceRepo;
             _scheduleHistoryRepo = scheduleHistoryRepo;
             _orderRepo = orderRepo;
+            _logger = logger;
             _configuration = configuration;
             _httpClient = httpClientFactory.CreateClient();
         }
@@ -58,7 +60,7 @@ namespace GoWhere_Api.Service.Service
                 RequiresPayment = requiresPayment,
                 PaymentAmount = requiresPayment ? PAYMENT_PRICE : 0,
                 Message = requiresPayment
-                    ? $"Bạn đã hết lượt tạo lịch trình. Vui lòng thanh toán {PAYMENT_PRICE:N0} VND để có thêm 5 lượt. (Đã dùng: {currentUsed}/{allowedTotal})"
+                    ? $"Bạn đã hết lượt tạo lịch trình. Vui lòng thanh toán {PAYMENT_PRICE:N0} VND để có thêm {PAID_TURNS_PER_PACKAGE} lượt. (Đã dùng: {currentUsed}/{allowedTotal})"
                     : $"Bạn còn {remainingRequests} lượt tạo lịch trình. (Hạn mức: {allowedTotal}, Đã dùng: {currentUsed})"
             };
         }
@@ -118,8 +120,8 @@ namespace GoWhere_Api.Service.Service
             // 6. Only increment request count after successful AI response
             await IncrementRequestCountAsync(userId);
 
-            // 7. Parse and return response
-            var scheduleResponse = ParseAIResponse(aiResponse, filteredSpots, request);
+            // 7. Parse and return response, then enrich with real images
+            var scheduleResponse = await ParseAndEnrichResponseAsync(aiResponse, filteredSpots, request);
             scheduleResponse.RemainingFreeRequests = usageLimit.RemainingFreeRequests;
             scheduleResponse.RequiresPayment = usageLimit.RequiresPayment;
             scheduleResponse.ProvinceId = province.ProvinceId;
@@ -178,8 +180,15 @@ namespace GoWhere_Api.Service.Service
             }
             else
             {
-                // Now UpdateAsync uses direct SQL for Count++
-                await _aiSuggestionRepo.UpdateAsync(aiRequest); 
+                // Double-check hạn mức tại thời điểm increment để tránh tăng Count khi đã hết lượt
+                var allowedTotal = Math.Max(aiRequest.AllowedCount, FREE_REQUEST_LIMIT);
+                if (aiRequest.Count >= allowedTotal)
+                {
+                    // Đã hết lượt, không tăng thêm Count
+                    return;
+                }
+
+                await _aiSuggestionRepo.IncrementCountAsync(userId);
             }
         }
 
@@ -240,79 +249,92 @@ namespace GoWhere_Api.Service.Service
                 ? $"- Vị trí xuất phát: {request.UserLocation} (tọa độ GPS)"
                 : "- Vị trí xuất phát: Chưa xác định (khách hàng chưa cung cấp hoặc từ chối quyền truy cập)";
 
-            var prompt = $@"
+            var prompt = $$"""
 Bạn là chuyên gia tư vấn du lịch Việt Nam. Hãy tạo một lịch trình du lịch chi tiết cho khách hàng với thông tin sau:
 
 **Thông tin chuyến đi:**
-{locationInfo}
-- Điểm đến: {province.ProvinceName}
-- Ngân sách: {request.Budget:N0} VND
-- Số ngày: {request.NumberOfDays} ngày
-- Phong cách: {request.TravelStyle}
-- Đi cùng: {request.CompanionType}
-{(string.IsNullOrEmpty(request.AdditionalRequirements) ? "" : $"- Yêu cầu thêm: {request.AdditionalRequirements}")}
+{{locationInfo}}
+- Điểm đến: {{province.ProvinceName}}
+- Ngân sách: {{request.Budget:N0}} VND
+- Số ngày: {{request.NumberOfDays}} ngày
+- Phong cách: {{request.TravelStyle}}
+- Đi cùng: {{request.CompanionType}}
+{{(string.IsNullOrEmpty(request.AdditionalRequirements) ? "" : $"- Yêu cầu thêm: {request.AdditionalRequirements}")}}
 
 **Các địa điểm du lịch có sẵn trong hệ thống:**
-{spotsInfo}
+{{spotsInfo}}
 
 **YÊU CẦU:**
-1. Tạo lịch trình {request.NumberOfDays} ngày, mỗi ngày có 3-5 hoạt động
+1. Tạo lịch trình {{request.NumberOfDays}} ngày, mỗi ngày có 3-5 hoạt động
 2. Ưu tiên sử dụng các địa điểm trong danh sách trên
-3. Thêm thông tin về ẩm thực, di chuyển, nghỉ ngơi
-4. Tổng chi phí phải trong ngân sách {request.Budget:N0} VND
-5. Phù hợp với phong cách {request.TravelStyle} và nhóm {request.CompanionType}
+3. Tổng chi phí phải trong ngân sách {{request.Budget:N0}} VND
+4. Phù hợp với phong cách {{request.TravelStyle}} và nhóm {{request.CompanionType}}
+5. Với mỗi địa điểm (scenicSpot), BẮT BUỘC cung cấp đầy đủ:
+   a) openingHours / closingHours: giờ mở/đóng cửa định dạng "HH:mm"
+   b) highlights: mảng 2-3 điểm nổi bật ngắn gọn
+   c) googleMapsLink: URL Google Maps tìm kiếm tên địa điểm, ví dụ: "https://www.google.com/maps/search/Hồ+Hoàn+Kiếm+Hà+Nội"
+   d) cuisine: mảng 1-3 món ăn/nhà hàng đặc trưng gần địa điểm theo cấu trúc:
+      - googleMapsUrl: URL Google Maps tìm kiếm tên quán, ví dụ: "https://www.google.com/maps/search/Phở+Thìn+Hà+Nội"
+   KHÔNG CẦN cung cấp suggestedImageUrl hay imageUrl cho ảnh - hệ thống sẽ tự tìm ảnh.
 6. Trả về JSON format như sau:
 
-{{
-  ""summary"": ""Tóm tắt lịch trình"",
-  ""estimatedTotalCost"": 0,
-  ""dailyItinerary"": [
-    {{
-      ""day"": 1,
-      ""date"": ""Ngày 1"",
-      ""dayBudget"": 0,
-      ""activities"": [
-        {{
-          ""time"": ""08:00"",
-          ""scenicSpot"": {{
-            ""name"": ""Tên địa điểm"",
-            ""description"": ""Mô tả"",
-            ""estimatedVisitPrice"": 0,
-            ""tips"": ""Lưu ý khi tham quan""
-          }},
-          ""activity"": ""Hoạt động"",
-          ""description"": ""Mô tả chi tiết"",
-          ""estimatedCost"": 0
-        }}
-        
+```json
+{
+  "summary": "Tóm tắt lịch trình",
+  "estimatedTotalCost": 0,
+  "dailyItinerary": [
+    {
+      "day": 1,
+      "date": "Ngày 1",
+      "dayBudget": 0,
+      "activities": [
+        {
+          "time": "08:00",
+          "scenicSpot": {
+            "name": "Tên địa điểm",
+            "description": "Mô tả chi tiết về địa điểm, lịch sử, đặc điểm nổi bật",
+            "estimatedVisitPrice": 0,
+            "tips": "Lưu ý thực tế hữu ích khi tham quan",
+            "openingHours": "07:00",
+            "closingHours": "21:00",
+            "highlights": ["Điểm nổi bật 1", "Điểm nổi bật 2", "Điểm nổi bật 3"],
+            "googleMapsLink": "https://www.google.com/maps/search/Tên+địa+điểm+Tỉnh",
+            "cuisine": [
+              {
+                "name": "Tên món ăn đặc trưng",
+                "restaurant": "Tên quán nổi tiếng",
+                "priceRange": "30.000 - 60.000 VND",
+                "mealType": "LUNCH",
+                "googleMapsUrl": "https://www.google.com/maps/search/Tên+quán+Tỉnh"
+              }
+            ]
+          },
+          "activity": "Tên hoạt động",
+          "description": "Mô tả chi tiết hoạt động",
+          "estimatedCost": 0
+        }
       ]
-    }}
+    }
   ]
-}}
+}
+```
 
 CHỈ TRẢ VỀ JSON, KHÔNG THÊM TEXT NÀO KHÁC.
-";
+""";
             return prompt;
         }
 
-        private AIScheduleResponseDto ParseAIResponse(string aiResponse, List<ScenicSpot> scenicSpots, AIScheduleRequestDto request)
+        private async Task<AIScheduleResponseDto> ParseAndEnrichResponseAsync(string aiResponse, List<ScenicSpot> scenicSpots, AIScheduleRequestDto request)
         {
             try
             {
-                // Remove markdown code blocks if present
                 aiResponse = aiResponse.Trim();
                 if (aiResponse.StartsWith("```json"))
-                {
                     aiResponse = aiResponse.Substring(7);
-                }
                 if (aiResponse.StartsWith("```"))
-                {
                     aiResponse = aiResponse.Substring(3);
-                }
                 if (aiResponse.EndsWith("```"))
-                {
                     aiResponse = aiResponse.Substring(0, aiResponse.Length - 3);
-                }
                 aiResponse = aiResponse.Trim();
 
                 var options = new JsonSerializerOptions
@@ -323,28 +345,66 @@ CHỈ TRẢ VỀ JSON, KHÔNG THÊM TEXT NÀO KHÁC.
                 var parsedResponse = JsonSerializer.Deserialize<AIScheduleResponseDto>(aiResponse, options);
 
                 if (parsedResponse == null)
-                {
                     throw new Exception("Failed to parse AI response");
-                }
 
-                // Match scenic spots with database
+                var enrichmentTasks = new List<Task>();
+
                 foreach (var day in parsedResponse.DailyItinerary ?? new List<DayItineraryDto>())
                 {
                     foreach (var activity in day.Activities ?? new List<ScheduleItemDto>())
                     {
-                        if (activity.ScenicSpot != null)
-                        {
-                            var matchedSpot = scenicSpots.FirstOrDefault(s =>
-                                s.ScenicSpotName.Contains(activity.ScenicSpot.Name, StringComparison.OrdinalIgnoreCase) ||
-                                activity.ScenicSpot.Name.Contains(s.ScenicSpotName, StringComparison.OrdinalIgnoreCase)
-                            );
+                        if (activity.ScenicSpot == null) continue;
 
-                            if (matchedSpot != null)
+                        var matchedSpot = scenicSpots.FirstOrDefault(s =>
+                            s.ScenicSpotName.Contains(activity.ScenicSpot.Name, StringComparison.OrdinalIgnoreCase) ||
+                            activity.ScenicSpot.Name.Contains(s.ScenicSpotName, StringComparison.OrdinalIgnoreCase)
+                        );
+
+                        if (matchedSpot != null)
+                        {
+                            activity.ScenicSpot.ScenicSpotId = matchedSpot.ScenicSpotId;
+                            activity.ScenicSpot.SuggestedImageUrl = matchedSpot.ImageUrl;
+                            activity.ScenicSpot.MediaUrls = matchedSpot.Medias?.Select(m => m.MediaUrl).ToList() ?? new List<string>();
+                        }
+                        else if (string.IsNullOrEmpty(activity.ScenicSpot.SuggestedImageUrl))
+                        {
+                            var spot = activity.ScenicSpot;
+                            enrichmentTasks.Add(Task.Run(async () =>
                             {
-                                activity.ScenicSpot.ScenicSpotId = matchedSpot.ScenicSpotId;
-                                activity.ScenicSpot.MediaUrls = matchedSpot.Medias?.Select(m => m.MediaUrl).ToList() ?? new List<string>();
+                                var url = await SearchImageAsync(spot.Name);
+                                if (!string.IsNullOrEmpty(url))
+                                    spot.SuggestedImageUrl = url;
+                            }));
+                        }
+
+                        if (activity.ScenicSpot.Cuisine != null)
+                        {
+                            foreach (var c in activity.ScenicSpot.Cuisine)
+                            {
+                                if (string.IsNullOrEmpty(c.ImageUrl))
+                                {
+                                    var cuisine = c;
+                                    enrichmentTasks.Add(Task.Run(async () =>
+                                    {
+                                        var url = await SearchImageAsync($"{cuisine.Name} {cuisine.Restaurant} món ăn Việt Nam");
+                                        if (!string.IsNullOrEmpty(url))
+                                            cuisine.ImageUrl = url;
+                                    }));
+                                }
                             }
                         }
+                    }
+                }
+
+                if (enrichmentTasks.Count > 0)
+                {
+                    try
+                    {
+                        await Task.WhenAll(enrichmentTasks);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning("Some image searches failed: {Message}", ex.Message);
                     }
                 }
 
@@ -352,7 +412,7 @@ CHỈ TRẢ VỀ JSON, KHÔNG THÊM TEXT NÀO KHÁC.
             }
             catch (Exception ex)
             {
-                // Fallback: Return a simple response
+                _logger.LogError(ex, "Failed to parse AI response");
                 return new AIScheduleResponseDto
                 {
                     Summary = $"Lịch trình {request.NumberOfDays} ngày tại tỉnh {request.ProvinceId}",
@@ -361,6 +421,48 @@ CHỈ TRẢ VỀ JSON, KHÔNG THÊM TEXT NÀO KHÁC.
                     RemainingFreeRequests = 0,
                     RequiresPayment = false
                 };
+            }
+        }
+
+        private async Task<string?> SearchImageAsync(string query)
+        {
+            try
+            {
+                // Dùng SerpAPI cho Google Images search
+                var apiKey = _configuration["GoogleSearch:ApiKey"];
+
+                if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR_SERPAPI_KEY")
+                    return null;
+
+                var encodedQuery = Uri.EscapeDataString(query);
+                var url = $"https://serpapi.com/search.json?engine=google_images&q={encodedQuery}&api_key={apiKey}&num=1";
+
+                var response = await _httpClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                    return null;
+
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+
+                if (doc.RootElement.TryGetProperty("images_results", out var images) && images.GetArrayLength() > 0)
+                {
+                    var first = images[0];
+                    if (first.TryGetProperty("original", out var originalProp))
+                    {
+                        return originalProp.GetString();
+                    }
+                    if (first.TryGetProperty("thumbnail", out var thumbProp))
+                    {
+                        return thumbProp.GetString();
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Image search failed for '{Query}': {Message}", query, ex.Message);
+                return null;
             }
         }
 
@@ -546,5 +648,6 @@ Hãy trả lời ngắn gọn, súc tích và hữu ích.";
                 Amount = 50000
             };
         }
+
     }
 }

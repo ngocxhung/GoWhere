@@ -1,4 +1,4 @@
-﻿using GoWhere_Api.Service.IService;
+using GoWhere_Api.Service.IService;
 
 namespace GoWhere_Api.Service.Service
 {
@@ -67,6 +67,36 @@ namespace GoWhere_Api.Service.Service
                 throw new ApplicationException("An error occurred while uploading the file.", ex);
             }
 
+        }
+
+        public async Task<string> UploadReceiptAsync(IFormFile file, int orderId)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                    throw new ArgumentException("File is null or empty.");
+
+                var ext = Path.GetExtension(file.FileName).ToLower();
+                var allowed = new[] { ".jpg", ".jpeg", ".png" };
+                if (!allowed.Contains(ext))
+                    throw new ArgumentException("Chỉ chấp nhận ảnh JPG, PNG.");
+
+                var receiptsFolder = Path.Combine("wwwroot", "uploads", "receipts");
+                if (!Directory.Exists(receiptsFolder))
+                    Directory.CreateDirectory(receiptsFolder);
+
+                var fileName = $"order-{orderId}.jpg";
+                var filePath = Path.Combine(receiptsFolder, fileName);
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+                return $"/uploads/receipts/{fileName}";
+            }
+            catch (Exception ex)
+            {
+                throw new ApplicationException("Lỗi khi tải ảnh chứng từ.", ex);
+            }
         }
     }
 }

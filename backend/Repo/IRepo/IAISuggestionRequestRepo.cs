@@ -9,5 +9,6 @@ namespace GoWhere_Api.Repo.IRepo
         Task UpdateAsync(AISuggestionRequest request);
         Task<int> GetRequestCountAsync(int userId);
         Task<bool> CanMakeFreeRequestAsync(int userId);
+        Task IncrementCountAsync(int userId);
     }
 }
